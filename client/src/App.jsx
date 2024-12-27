@@ -29,6 +29,7 @@ import AssignedParcels from "./components/driver/AssignedParcels";
 import DeliveryHistory from "./components/driver/DeliveryHistory";
 import DriverProfile from "./components/driver/Profile";
 import DriverSettings from "./components/driver/Settings";
+import ForgotPassword from "./components/auth/ForgotPassword";
 
 function App() {
   return (
@@ -194,6 +195,8 @@ function App() {
             </DriverDashboardLayout>
           }
         />
+
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </Router>
   );
