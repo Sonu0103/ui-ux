@@ -100,9 +100,12 @@ const Login = () => {
           >
             Create new account
           </Link>
-          <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
+          <Link
+            to="/forgot-password"
+            className="text-blue-600 hover:text-blue-700 font-medium"
+          >
             Forgot password?
-          </a>
+          </Link>
         </div>
       </motion.form>
     </div>
