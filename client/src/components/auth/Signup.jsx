@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../assets/logoo.png";
-import background from "../../assets/background.jpg";
+import back from "../../assets/back.png";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -20,22 +20,21 @@ const Signup = () => {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat"
-      style={{
-        backgroundImage: `url(${background})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      <div className="absolute inset-0 bg-black opacity-50"></div>
+    <div className="min-h-screen flex items-center justify-between bg-gradient-to-br from-sky-400 to-sky-400">
+      <div className="w-1/2 h-screen flex items-center justify-center pl-20">
+        <img
+          src={back}
+          alt="Delivery"
+          className="max-w-full max-h-[80vh] object-contain"
+        />
+      </div>
 
       <motion.form
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         onSubmit={handleSubmit}
-        className="relative bg-white p-8 rounded-lg shadow-xl ml-32 w-[650px] max-h-[90vh] overflow-y-auto"
+        className="relative bg-white p-8 rounded-lg shadow-xl mr-32 w-[650px] max-h-[90vh] overflow-y-auto"
       >
         <div className="flex flex-col items-center mb-6">
           <img src={logo} alt="Logo" className="w-16 h-16 mb-3" />
