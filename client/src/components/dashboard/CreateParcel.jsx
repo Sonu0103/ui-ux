@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 
 const CreateParcel = () => {
   const navigate = useNavigate();
@@ -49,10 +50,10 @@ const CreateParcel = () => {
       // Show success message
       showToast("Parcel created successfully!", "success");
 
-      // Navigate to orders page
-      navigate("/dashboard/orders");
+      // Navigate to payment method page
+      navigate("/dashboard/payment-method");
     } catch (error) {
-      showToast("Failed to create parcel. Please try again.", "error");
+      toast.error("Failed to create parcel. Please try again.");
     }
   };
 
