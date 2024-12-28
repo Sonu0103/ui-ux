@@ -30,6 +30,8 @@ import DeliveryHistory from "./components/driver/DeliveryHistory";
 import DriverProfile from "./components/driver/Profile";
 import DriverSettings from "./components/driver/Settings";
 import ForgotPassword from "./components/auth/ForgotPassword";
+import PaymentMethod from "./components/dashboard/PaymentMethod";
+import ParcelConfirmation from "./components/dashboard/ParcelConfirmation";
 
 function App() {
   return (
@@ -102,6 +104,22 @@ function App() {
           element={
             <DashboardLayout>
               <Profile />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/dashboard/payment-method"
+          element={
+            <DashboardLayout>
+              <PaymentMethod />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/dashboard/confirmation"
+          element={
+            <DashboardLayout>
+              <ParcelConfirmation />
             </DashboardLayout>
           }
         />
