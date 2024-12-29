@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../assets/logoo.png";
 import back from "../../assets/back.png";
-import axios from "axios";
+import authService from "../../api/authService";
 import toast from "react-hot-toast";
 
 const Login = () => {
@@ -17,20 +17,12 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        formData
-      );
+      const response = await authService.login(formData);
 
-      if (response.data.status === "success") {
-        // Save token and user data
-        localStorage.setItem("token", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.data.user));
-
+      if (response.status === "success") {
         toast.success("Login successful!");
 
-        // Redirect based on role
-        switch (response.data.data.user.role) {
+        switch (response.data.user.role) {
           case "admin":
             navigate("/admin/dashboard");
             break;
