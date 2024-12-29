@@ -3,40 +3,50 @@ const User = require("../models/User");
 
 exports.protect = async (req, res, next) => {
   try {
+    console.log("=== Auth Middleware Started ===");
+    console.log("Headers:", req.headers);
+
     let token;
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer")
     ) {
       token = req.headers.authorization.split(" ")[1];
+      console.log("Token extracted:", token ? "Present" : "Missing");
     }
 
     if (!token) {
+      console.log("No token found");
       return res.status(401).json({
         status: "error",
-        message: "You are not logged in. Please log in to get access.",
+        message: "Please log in to access this resource",
       });
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id);
 
-    // Check if user still exists
-    const user = await User.findById(decoded.id);
-    if (!user) {
+      if (!user) {
+        return res.status(401).json({
+          status: "error",
+          message: "User not found",
+        });
+      }
+
+      req.user = user;
+      next();
+    } catch (error) {
       return res.status(401).json({
         status: "error",
-        message: "The user belonging to this token no longer exists.",
+        message: "Invalid token",
       });
     }
-
-    // Grant access to protected route
-    req.user = user;
-    next();
   } catch (error) {
-    res.status(401).json({
+    console.error("Auth middleware error:", error);
+    return res.status(500).json({
       status: "error",
-      message: "Invalid token. Please log in again.",
+      message: "Internal server error",
     });
   }
 };
