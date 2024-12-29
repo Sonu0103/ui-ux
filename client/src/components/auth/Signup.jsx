@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../assets/logoo.png";
@@ -11,11 +11,23 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
     password: "",
     confirmPassword: "",
+    phone: "",
     role: "user",
   });
+
+  // Clear form data when component mounts
+  useEffect(() => {
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      phone: "",
+      role: "user",
+    });
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,9 +37,11 @@ const Signup = () => {
     }
 
     try {
+      const { confirmPassword, ...signupData } = formData;
+
       const response = await axios.post(
         "http://localhost:5000/api/auth/signup",
-        formData
+        signupData
       );
 
       if (response.data.status === "success") {
@@ -78,6 +92,7 @@ const Signup = () => {
               }
               className="w-full px-4 py-2.5 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter your full name"
+              autoComplete="off"
             />
           </div>
 
@@ -93,8 +108,9 @@ const Signup = () => {
               onChange={(e) =>
                 setFormData({ ...formData, email: e.target.value })
               }
-              className="w-full px-4 py-2.5 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter your email"
+              autoComplete="off"
             />
           </div>
 

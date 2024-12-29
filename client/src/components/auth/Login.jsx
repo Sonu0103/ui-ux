@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../assets/logoo.png";
@@ -13,6 +13,15 @@ const Login = () => {
     password: "",
     role: "user",
   });
+
+  // Clear form data when component mounts
+  useEffect(() => {
+    setFormData({
+      email: "",
+      password: "",
+      role: "user",
+    });
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -74,6 +83,7 @@ const Login = () => {
             }
             className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Enter your email"
+            autoComplete="off"
           />
         </div>
 
@@ -90,6 +100,7 @@ const Login = () => {
             }
             className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Enter your password"
+            autoComplete="new-password"
           />
         </div>
 

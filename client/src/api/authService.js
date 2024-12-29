@@ -30,6 +30,7 @@ const authService = {
   logout: () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    sessionStorage.clear();
   },
 
   getProfile: async () => {
