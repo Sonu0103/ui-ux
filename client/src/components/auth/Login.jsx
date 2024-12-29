@@ -1,19 +1,49 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../assets/logoo.png";
 import back from "../../assets/back.png";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     role: "user",
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login data:", formData);
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        formData
+      );
+
+      if (response.data.status === "success") {
+        // Save token and user data
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.data.user));
+
+        toast.success("Login successful!");
+
+        // Redirect based on role
+        switch (response.data.data.user.role) {
+          case "admin":
+            navigate("/admin/dashboard");
+            break;
+          case "driver":
+            navigate("/driver/dashboard");
+            break;
+          default:
+            navigate("/dashboard");
+        }
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Login failed");
+    }
   };
 
   return (

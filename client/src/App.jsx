@@ -32,6 +32,7 @@ import DriverSettings from "./components/driver/Settings";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import PaymentMethod from "./components/dashboard/PaymentMethod";
 import ParcelConfirmation from "./components/dashboard/ParcelConfirmation";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
   return (
@@ -62,9 +63,11 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <DashboardLayout>
-              <DashboardHome />
-            </DashboardLayout>
+            <ProtectedRoute allowedRoles={["user"]}>
+              <DashboardLayout>
+                <DashboardHome />
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
         <Route
@@ -127,9 +130,11 @@ function App() {
         <Route
           path="/admin/dashboard"
           element={
-            <AdminDashboardLayout>
-              <AdminDashboard />
-            </AdminDashboardLayout>
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboardLayout>
+                <AdminDashboard />
+              </AdminDashboardLayout>
+            </ProtectedRoute>
           }
         />
         <Route
@@ -176,9 +181,11 @@ function App() {
         <Route
           path="/driver/dashboard"
           element={
-            <DriverDashboardLayout>
-              <DriverDashboard />
-            </DriverDashboardLayout>
+            <ProtectedRoute allowedRoles={["driver"]}>
+              <DriverDashboardLayout>
+                <DriverDashboard />
+              </DriverDashboardLayout>
+            </ProtectedRoute>
           }
         />
         <Route

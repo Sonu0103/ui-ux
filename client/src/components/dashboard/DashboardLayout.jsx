@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/logoo.png";
+import { toast } from "react-hot-toast";
 
 const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
@@ -15,6 +16,18 @@ const DashboardLayout = ({ children }) => {
     { name: "Payment History", href: "/dashboard/payments", icon: "💳" },
     { name: "Profile", href: "/dashboard/profile", icon: "👤" },
   ];
+
+  const handleLogout = () => {
+    // Clear localStorage
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // Show success message
+    toast.success("Logged out successfully");
+
+    // Redirect to login
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -75,10 +88,7 @@ const DashboardLayout = ({ children }) => {
                       Profile Settings
                     </Link>
                     <button
-                      onClick={() => {
-                        // Add logout logic here
-                        navigate("/login");
-                      }}
+                      onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       Logout

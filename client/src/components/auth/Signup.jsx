@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../assets/logoo.png";
 import back from "../../assets/back.png";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 const Signup = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -14,9 +17,26 @@ const Signup = () => {
     role: "user",
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Signup data:", formData);
+
+    if (formData.password !== formData.confirmPassword) {
+      return toast.error("Passwords do not match");
+    }
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/signup",
+        formData
+      );
+
+      if (response.data.status === "success") {
+        toast.success("Signup successful! Please login to continue.");
+        navigate("/login");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Signup failed");
+    }
   };
 
   return (
