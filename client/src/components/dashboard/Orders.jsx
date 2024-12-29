@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const Orders = () => {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState("all");
 
   // Mock orders data
@@ -12,6 +15,10 @@ const Orders = () => {
       address: "Bhaktapur-05, Nepal",
       status: "In Transit",
       amount: "NPR 250",
+      trackingDetails: {
+        currentLocation: "Kathmandu Hub",
+        estimatedDelivery: "2024-03-20",
+      },
     },
     {
       id: "PAR002",
@@ -20,6 +27,10 @@ const Orders = () => {
       address: "Lalitpur-15, Nepal",
       status: "Delivered",
       amount: "NPR 300",
+      trackingDetails: {
+        currentLocation: "Delivered",
+        estimatedDelivery: "2024-03-15",
+      },
     },
     {
       id: "PAR003",
@@ -28,6 +39,10 @@ const Orders = () => {
       address: "Kathmandu-10, Nepal",
       status: "Pending",
       amount: "NPR 200",
+      trackingDetails: {
+        currentLocation: "Processing",
+        estimatedDelivery: "2024-03-21",
+      },
     },
   ];
 
@@ -35,6 +50,22 @@ const Orders = () => {
     filter === "all"
       ? orders
       : orders.filter((order) => order.status.toLowerCase() === filter);
+
+  // Add these handler functions
+  const handleTrack = (orderId) => {
+    // Navigate to track parcel page with the order ID
+    navigate(`/dashboard/track-parcel?id=${orderId}`);
+  };
+
+  const handleViewDetails = (order) => {
+    // Show order details in a modal
+    setSelectedOrder(order);
+    setIsModalOpen(true);
+  };
+
+  // Add state for modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -114,10 +145,16 @@ const Orders = () => {
                   {order.amount}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button className="text-blue-600 hover:text-blue-900 mr-4">
+                  <button
+                    onClick={() => handleTrack(order.id)}
+                    className="text-blue-600 hover:text-blue-900 mr-4"
+                  >
                     Track
                   </button>
-                  <button className="text-gray-600 hover:text-gray-900">
+                  <button
+                    onClick={() => handleViewDetails(order)}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
                     Details
                   </button>
                 </td>
@@ -126,6 +163,91 @@ const Orders = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Order Details Modal */}
+      {isModalOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg p-6 w-full max-w-2xl"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Order Details</h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Order ID</p>
+                  <p className="font-medium">{selectedOrder.id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Date</p>
+                  <p className="font-medium">{selectedOrder.date}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Receiver</p>
+                  <p className="font-medium">{selectedOrder.receiver}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Delivery Address</p>
+                  <p className="font-medium">{selectedOrder.address}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Status</p>
+                  <span
+                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      selectedOrder.status === "Delivered"
+                        ? "bg-green-100 text-green-800"
+                        : selectedOrder.status === "In Transit"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
+                    {selectedOrder.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Amount</p>
+                  <p className="font-medium">{selectedOrder.amount}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h3 className="font-medium mb-2">Tracking Details</h3>
+                <p className="text-sm text-gray-600">
+                  Current Location:{" "}
+                  <span className="text-gray-900">
+                    {selectedOrder.trackingDetails.currentLocation}
+                  </span>
+                </p>
+                <p className="text-sm text-gray-600">
+                  Estimated Delivery:{" "}
+                  <span className="text-gray-900">
+                    {selectedOrder.trackingDetails.estimatedDelivery}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
