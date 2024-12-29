@@ -14,10 +14,15 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
+    select: false,
   },
   phone: {
     type: String,
     required: true,
+  },
+  address: {
+    type: String,
+    default: "",
   },
   role: {
     type: String,
@@ -27,6 +32,10 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+  photo: {
+    type: String,
+    default: null,
   },
 });
 
