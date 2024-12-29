@@ -9,7 +9,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "",
+    name: "",
     email: "",
     phone: "",
     address: "",
@@ -45,7 +45,7 @@ const Profile = () => {
         const currentUser = authService.getCurrentUser();
         if (currentUser) {
           setFormData({
-            fullName: currentUser.name || "",
+            name: currentUser.name || "",
             email: currentUser.email || "",
             phone: currentUser.phone || "",
             address: currentUser.address || "",
@@ -57,7 +57,7 @@ const Profile = () => {
         if (response.status === "success") {
           const userData = response.data.user;
           setFormData({
-            fullName: userData.name || "",
+            name: userData.name || "",
             email: userData.email || "",
             phone: userData.phone || "",
             address: userData.address || "",
@@ -85,7 +85,7 @@ const Profile = () => {
     try {
       setIsLoading(true);
       const updateData = {
-        name: formData.fullName,
+        name: formData.name,
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
@@ -178,7 +178,7 @@ const Profile = () => {
           </div>
           {!isEditing ? (
             <div>
-              <h2 className="text-xl font-semibold">{formData.fullName}</h2>
+              <h2 className="text-xl font-semibold">{formData.name}</h2>
               <p className="text-gray-600">{formData.email}</p>
             </div>
           ) : null}
@@ -194,9 +194,9 @@ const Profile = () => {
                 <input
                   type="text"
                   required
-                  value={formData.fullName}
+                  value={formData.name}
                   onChange={(e) =>
-                    setFormData({ ...formData, fullName: e.target.value })
+                    setFormData({ ...formData, name: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
