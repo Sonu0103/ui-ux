@@ -1,11 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/logoo.png";
+import authService from "../../api/authService";
 
 const DriverDashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const currentUser = authService.getCurrentUser();
+        if (currentUser) {
+          setUserData(currentUser);
+        }
+
+        const response = await authService.getProfile();
+        if (response.status === "success") {
+          setUserData(response.data.user);
+        }
+      } catch (error) {
+        console.error("Failed to load user data:", error);
+      }
+    };
+
+    loadUserData();
+  }, []);
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate("/login");
+  };
 
   const navigation = [
     { name: "Dashboard", href: "/driver/dashboard", icon: "📊" },
@@ -60,9 +87,28 @@ const DriverDashboardLayout = ({ children }) => {
                   }
                   className="flex items-center space-x-2"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    <span className="text-xl">👤</span>
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                    {userData?.photo ? (
+                      <img
+                        src={`http://localhost:5000${userData.photo}`}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error("Profile image load error");
+                          e.target.src = "";
+                          e.target.onerror = null;
+                          e.target.parentElement.innerHTML = "👤";
+                        }}
+                      />
+                    ) : (
+                      <span className="text-xl">👤</span>
+                    )}
                   </div>
+                  {userData && (
+                    <span className="text-sm font-medium text-gray-700">
+                      {userData.name}
+                    </span>
+                  )}
                 </button>
 
                 {isProfileDropdownOpen && (
@@ -74,10 +120,7 @@ const DriverDashboardLayout = ({ children }) => {
                       Profile Settings
                     </Link>
                     <button
-                      onClick={() => {
-                        // Add logout logic here
-                        navigate("/login");
-                      }}
+                      onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       Logout
