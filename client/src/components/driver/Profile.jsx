@@ -1,41 +1,118 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import authService from "../../api/authService";
 
 const Profile = () => {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "John Driver",
-    email: "john.driver@example.com",
-    phone: "+977 9876543210",
-    vehicleNumber: "BA 1 PA 2345",
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    vehicleNumber: "",
     vehicleType: "Motorcycle",
-    licenseNumber: "12345678",
-    address: "Kathmandu, Nepal",
+    licenseNumber: "",
+    photo: null,
   });
 
-  const [stats] = useState({
-    totalDeliveries: 156,
-    avgDeliveryTime: "45 mins",
-    rating: 4.8,
-    completionRate: "98%",
-  });
+  useEffect(() => {
+    const loadDriverProfile = async () => {
+      try {
+        setIsLoading(true);
+        const currentUser = authService.getCurrentUser();
+        if (currentUser) {
+          setFormData({
+            name: currentUser.name || "",
+            email: currentUser.email || "",
+            phone: currentUser.phone || "",
+            address: currentUser.address || "",
+            vehicleNumber: currentUser.vehicleNumber || "",
+            vehicleType: currentUser.vehicleType || "Motorcycle",
+            licenseNumber: currentUser.licenseNumber || "",
+            photo: currentUser.photo || null,
+          });
+        }
 
-  const handlePhotoChange = (e) => {
+        const response = await authService.getProfile();
+        if (response.status === "success") {
+          const userData = response.data.user;
+          setFormData({
+            name: userData.name || "",
+            email: userData.email || "",
+            phone: userData.phone || "",
+            address: userData.address || "",
+            vehicleNumber: userData.vehicleNumber || "",
+            vehicleType: userData.vehicleType || "Motorcycle",
+            licenseNumber: userData.licenseNumber || "",
+            photo: userData.photo || null,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load profile:", error);
+        if (error.response?.status === 401) {
+          toast.error("Session expired. Please login again.");
+          navigate("/login");
+        } else {
+          toast.error("Failed to load profile data");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDriverProfile();
+  }, [navigate]);
+
+  const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Handle photo upload logic here
-      toast.success("Profile photo updated successfully!");
+      try {
+        setIsLoading(true);
+        const response = await authService.uploadProfilePhoto(file);
+        if (response.status === "success") {
+          setFormData((prev) => ({
+            ...prev,
+            photo: response.data.user.photo,
+          }));
+          toast.success("Profile photo updated successfully!");
+        }
+      } catch (error) {
+        console.error("Photo upload error:", error);
+        toast.error("Failed to update profile photo");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle profile update logic here
-    console.log("Updated profile:", formData);
-    setIsEditing(false);
-    toast.success("Profile updated successfully!");
+    try {
+      setIsLoading(true);
+      const response = await authService.updateProfile(formData);
+      if (response.status === "success") {
+        toast.success("Profile updated successfully!");
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      toast.error(error.response?.data?.message || "Failed to update profile");
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -63,12 +140,25 @@ const Profile = () => {
 
         {/* Profile Header */}
         <div className="flex items-center space-x-6 mb-8">
-          <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center">
-            <span className="text-5xl">👤</span>
+          <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+            {formData.photo ? (
+              <img
+                src={`http://localhost:5000${formData.photo}`}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = "";
+                  e.target.onerror = null;
+                  e.target.parentElement.innerHTML = "👤";
+                }}
+              />
+            ) : (
+              <span className="text-5xl">👤</span>
+            )}
           </div>
           {!isEditing && (
             <div>
-              <h2 className="text-xl font-semibold">{formData.fullName}</h2>
+              <h2 className="text-xl font-semibold">{formData.name}</h2>
               <p className="text-gray-600">{formData.email}</p>
               <p className="text-gray-600 mt-1">
                 Vehicle: {formData.vehicleType}
@@ -77,33 +167,22 @@ const Profile = () => {
           )}
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {Object.entries(stats).map(([key, value]) => (
-            <div key={key} className="bg-gray-50 p-4 rounded-lg text-center">
-              <p className="text-lg font-semibold text-gray-900">{value}</p>
-              <p className="text-sm text-gray-600">
-                {key.replace(/([A-Z])/g, " $1").trim()}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Profile Form */}
         {isEditing ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Form fields */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name
                 </label>
                 <input
                   type="text"
-                  value={formData.fullName}
+                  value={formData.name}
                   onChange={(e) =>
-                    setFormData({ ...formData, fullName: e.target.value })
+                    setFormData({ ...formData, name: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
                 />
               </div>
               <div>
@@ -117,6 +196,7 @@ const Profile = () => {
                     setFormData({ ...formData, email: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
                 />
               </div>
               <div>
@@ -128,6 +208,20 @@ const Profile = () => {
                   value={formData.phone}
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Address
+                </label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 />
@@ -143,6 +237,7 @@ const Profile = () => {
                     setFormData({ ...formData, vehicleNumber: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
                 />
               </div>
               <div>
@@ -155,6 +250,7 @@ const Profile = () => {
                     setFormData({ ...formData, vehicleType: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
                 >
                   <option value="Motorcycle">Motorcycle</option>
                   <option value="Car">Car</option>
@@ -172,6 +268,7 @@ const Profile = () => {
                     setFormData({ ...formData, licenseNumber: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  required
                 />
               </div>
             </div>
@@ -179,8 +276,9 @@ const Profile = () => {
               <button
                 type="submit"
                 className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+                disabled={isLoading}
               >
-                Save Changes
+                {isLoading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>
@@ -204,7 +302,7 @@ const Profile = () => {
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500">Address</h3>
-              <p className="mt-1">{formData.address}</p>
+              <p className="mt-1">{formData.address || "Not provided"}</p>
             </div>
           </div>
         )}
