@@ -177,6 +177,16 @@ function App() {
             </AdminDashboardLayout>
           }
         />
+        <Route
+          path="/admin/profile"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboardLayout>
+                <Profile />
+              </AdminDashboardLayout>
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/driver/dashboard"
