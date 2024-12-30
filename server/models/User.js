@@ -29,6 +29,20 @@ const userSchema = new mongoose.Schema({
     enum: ["user", "admin", "driver"],
     default: "user",
   },
+  // Driver specific fields
+  vehicleNumber: {
+    type: String,
+    default: "",
+  },
+  vehicleType: {
+    type: String,
+    enum: ["Motorcycle", "Car", "Van"],
+    default: "Motorcycle",
+  },
+  licenseNumber: {
+    type: String,
+    default: "",
+  },
   createdAt: {
     type: Date,
     default: Date.now,
