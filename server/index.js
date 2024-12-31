@@ -4,6 +4,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const path = require("path");
+const parcelRoutes = require("./routes/parcelRoutes");
 
 dotenv.config();
 
@@ -44,6 +45,7 @@ if (!fs.existsSync(uploadDir)) {
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/parcels", parcelRoutes);
 
 // Error handling
 app.use((err, req, res, next) => {
