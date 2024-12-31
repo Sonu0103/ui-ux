@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
-const userSchema = new mongoose.Schema({
+const baseUserSchema = {
   name: {
     type: String,
     required: true,
@@ -29,20 +29,6 @@ const userSchema = new mongoose.Schema({
     enum: ["user", "admin", "driver"],
     default: "user",
   },
-  // Driver specific fields
-  vehicleNumber: {
-    type: String,
-    default: "",
-  },
-  vehicleType: {
-    type: String,
-    enum: ["Motorcycle", "Car", "Van"],
-    default: "Motorcycle",
-  },
-  licenseNumber: {
-    type: String,
-    default: "",
-  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -51,7 +37,35 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
-});
+};
+
+// Driver-specific schema
+const driverSchema = {
+  ...baseUserSchema,
+  vehicleNumber: {
+    type: String,
+    required: function () {
+      return this.role === "driver";
+    },
+  },
+  vehicleType: {
+    type: String,
+    enum: ["Motorcycle", "Car", "Van"],
+    required: function () {
+      return this.role === "driver";
+    },
+  },
+  licenseNumber: {
+    type: String,
+    required: function () {
+      return this.role === "driver";
+    },
+  },
+};
+
+const userSchema = new mongoose.Schema(
+  this.role === "driver" ? driverSchema : baseUserSchema
+);
 
 // Hash password before saving
 userSchema.pre("save", async function (next) {
