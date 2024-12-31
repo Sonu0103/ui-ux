@@ -1,54 +1,79 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import parcelService from "../../api/parcelService";
+import toast from "react-hot-toast";
 
 const DashboardHome = () => {
+  const [stats, setStats] = useState({
+    totalParcels: 0,
+    inTransitParcels: 0,
+    deliveredParcels: 0,
+    totalSpent: 0,
+  });
+  const [recentParcels, setRecentParcels] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const response = await parcelService.getDashboardStats();
+      if (response.status === "success") {
+        setStats(response.data.stats);
+        setRecentParcels(response.data.recentParcels);
+      }
+    } catch (error) {
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const metrics = [
     {
       title: "Total Parcels",
-      value: "12",
+      value: stats.totalParcels,
       icon: "📦",
-      trend: "+3",
+      trend: `${stats.totalParcels > 0 ? "+" : ""}${stats.totalParcels}`,
       color: "bg-blue-500",
     },
     {
       title: "In Transit",
-      value: "4",
+      value: stats.inTransitParcels,
       icon: "🚚",
-      trend: "+1",
+      trend: `${stats.inTransitParcels > 0 ? "+" : ""}${
+        stats.inTransitParcels
+      }`,
       color: "bg-yellow-500",
     },
     {
       title: "Delivered",
-      value: "8",
+      value: stats.deliveredParcels,
       icon: "✅",
-      trend: "+2",
+      trend: `${stats.deliveredParcels > 0 ? "+" : ""}${
+        stats.deliveredParcels
+      }`,
       color: "bg-green-500",
     },
     {
       title: "Total Spent",
-      value: "NPR 12,345",
+      value: `NPR ${stats.totalSpent}`,
       icon: "💰",
-      trend: "+NPR 2,000",
+      trend: `NPR ${stats.totalSpent}`,
       color: "bg-purple-500",
     },
   ];
 
-  const recentParcels = [
-    {
-      id: "PAR001",
-      from: "Kathmandu",
-      to: "Pokhara",
-      status: "In Transit",
-      date: "2024-03-15",
-    },
-    {
-      id: "PAR002",
-      from: "Kathmandu",
-      to: "Chitwan",
-      status: "Delivered",
-      date: "2024-03-14",
-    },
-    // Add more parcels as needed
-  ];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -90,58 +115,64 @@ const DashboardHome = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             Recent Parcels
           </h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Parcel ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    From
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    To
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {recentParcels.map((parcel) => (
-                  <tr key={parcel.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {parcel.id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {parcel.from}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {parcel.to}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          parcel.status === "Delivered"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {parcel.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {parcel.date}
-                    </td>
+          {recentParcels.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tracking ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      From
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      To
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {recentParcels.map((parcel) => (
+                    <tr key={parcel._id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {parcel.trackingId}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {parcel.senderDetails.address}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {parcel.receiverDetails.address}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            parcel.status === "delivered"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {parcel.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(parcel.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No parcels created yet
+            </div>
+          )}
         </div>
       </div>
     </div>
