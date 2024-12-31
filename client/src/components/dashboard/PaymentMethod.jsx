@@ -1,13 +1,29 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import parcelService from "../../api/parcelService";
 
 const PaymentMethod = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const parcelId = location.state?.parcelId;
 
-  const handleProceed = () => {
-    toast.success("Payment method selected!");
-    navigate("/dashboard/confirmation");
+  const handleProceed = async () => {
+    try {
+      if (!parcelId) {
+        throw new Error("Parcel ID not found");
+      }
+
+      // Here you would typically update the parcel's payment status
+      // For now, we'll just show a success message
+      toast.success("Payment method selected!");
+      navigate("/dashboard/confirmation", {
+        state: { parcelId },
+      });
+    } catch (error) {
+      toast.error("Failed to process payment method");
+      navigate("/dashboard/create-parcel");
+    }
   };
 
   return (
