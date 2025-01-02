@@ -39,6 +39,7 @@ const upload = multer({
 exports.signup = async (req, res) => {
   try {
     const { name, email, password, phone, role } = req.body;
+    console.log("Signup request:", { name, email, role }); // Debug log
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -56,22 +57,25 @@ exports.signup = async (req, res) => {
       password,
       phone,
       role,
+      status: "active", // Ensure status is set to active
     });
 
-    // Generate token
-    const token = signToken(user._id);
-
-    // Remove password from output
-    user.password = undefined;
+    console.log("Created user:", user); // Debug log
 
     res.status(201).json({
       status: "success",
-      token,
       data: {
-        user,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+        },
       },
     });
   } catch (error) {
+    console.error("Signup error:", error);
     res.status(400).json({
       status: "error",
       message: error.message,
