@@ -33,6 +33,7 @@ import ForgotPassword from "./components/auth/ForgotPassword";
 import PaymentMethod from "./components/dashboard/PaymentMethod";
 import ParcelConfirmation from "./components/dashboard/ParcelConfirmation";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import MyOrders from "./components/dashboard/MyOrders";
 
 function App() {
   return (
@@ -73,25 +74,31 @@ function App() {
         <Route
           path="/dashboard/create-parcel"
           element={
-            <DashboardLayout>
-              <CreateParcel />
-            </DashboardLayout>
+            <ProtectedRoute allowedRoles={["user"]}>
+              <DashboardLayout>
+                <CreateParcel />
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
         <Route
-          path="/dashboard/track-parcel"
+          path="/dashboard/track-parcel/:trackingId?"
           element={
-            <DashboardLayout>
-              <TrackParcel />
-            </DashboardLayout>
+            <ProtectedRoute allowedRoles={["user"]}>
+              <DashboardLayout>
+                <TrackParcel />
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/dashboard/orders"
           element={
-            <DashboardLayout>
-              <Orders />
-            </DashboardLayout>
+            <ProtectedRoute allowedRoles={["user"]}>
+              <DashboardLayout>
+                <MyOrders />
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
         <Route
