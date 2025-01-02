@@ -1,168 +1,203 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import "./map.css";
-
-// Fix for the marker icon
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-});
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import driverService from "../../api/driverService";
 
 const DriverDashboard = () => {
-  const [mapReady, setMapReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalAssigned: 0,
+    inTransitParcels: 0,
+    deliveredParcels: 0,
+    pendingParcels: 0,
+    todayDeliveries: 0,
+    recentDeliveries: [],
+    totalEarnings: 0,
+  });
 
   useEffect(() => {
-    setMapReady(true);
+    loadDashboardStats();
   }, []);
 
-  const metrics = [
-    {
-      title: "Today's Assignments",
-      value: "5",
-      icon: "🚚",
-      trend: "+2",
-      color: "bg-blue-500",
-    },
-    {
-      title: "Delivered Today",
-      value: "3",
-      icon: "✅",
-      trend: "+1",
-      color: "bg-green-500",
-    },
-    {
-      title: "Today's Earnings",
-      value: "NPR 2,500",
-      icon: "💰",
-      trend: "+NPR 500",
-      color: "bg-purple-500",
-    },
-  ];
+  const loadDashboardStats = async () => {
+    try {
+      setIsLoading(true);
+      const response = await driverService.getDashboardStats();
+      if (response.status === "success") {
+        setStats(response.data);
+      }
+    } catch (error) {
+      toast.error("Failed to load dashboard statistics");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const notifications = [
-    {
-      id: 1,
-      message: "New parcel assigned for delivery to Lalitpur",
-      time: "5 minutes ago",
-    },
-    {
-      id: 2,
-      message: "Customer confirmed delivery of parcel #PAR123",
-      time: "30 minutes ago",
-    },
-  ];
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "delivered":
+        return "bg-green-100 text-green-800";
+      case "in_transit":
+        return "bg-yellow-100 text-yellow-800";
+      case "picked_up":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
-  // Sample delivery locations
-  const deliveryLocations = [
-    {
-      id: 1,
-      location: "Lalitpur",
-      coordinates: [27.6588, 85.3247],
-      info: "Delivery #PAR123",
-    },
-    {
-      id: 2,
-      location: "Bhaktapur",
-      coordinates: [27.671, 85.4298],
-      info: "Delivery #PAR124",
-    },
-  ];
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Driver Dashboard</h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Total Assigned Parcels */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white rounded-lg shadow-sm p-6"
+        >
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Total Assigned
+          </h3>
+          <p className="text-3xl font-bold text-gray-900">
+            {stats.totalAssigned}
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            All time assigned parcels
+          </p>
+        </motion.div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {metrics.map((metric, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-lg shadow-sm p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">{metric.title}</p>
-                <h3 className="text-2xl font-bold text-gray-900 mt-1">
-                  {metric.value}
-                </h3>
-                <p className="text-sm text-green-600 mt-2">{metric.trend}</p>
-              </div>
-              <div
-                className={`${metric.color} text-white p-3 rounded-full text-2xl`}
-              >
-                {metric.icon}
-              </div>
-            </div>
-          </motion.div>
-        ))}
+        {/* In Transit Parcels */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-lg shadow-sm p-6"
+        >
+          <h3 className="text-lg font-medium text-gray-900 mb-2">In Transit</h3>
+          <p className="text-3xl font-bold text-yellow-600">
+            {stats.inTransitParcels}
+          </p>
+          <p className="text-sm text-gray-500 mt-2">Currently in transit</p>
+        </motion.div>
+
+        {/* Delivered Today */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-lg shadow-sm p-6"
+        >
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Delivered Today
+          </h3>
+          <p className="text-3xl font-bold text-green-600">
+            {stats.todayDeliveries}
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Completed deliveries today
+          </p>
+        </motion.div>
+
+        {/* Total Earnings */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-lg shadow-sm p-6"
+        >
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Total Earnings
+          </h3>
+          <p className="text-3xl font-bold text-blue-600">
+            NPR {stats.totalEarnings}
+          </p>
+          <p className="text-sm text-gray-500 mt-2">All time earnings</p>
+        </motion.div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Map Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Delivery Map
-          </h2>
-          <div className="h-[400px] bg-gray-100 rounded-lg">
-            {mapReady && (
-              <MapContainer
-                center={[27.7172, 85.324]}
-                zoom={12}
-                style={{ height: "100%", width: "100%" }}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                {deliveryLocations.map((location) => (
-                  <Marker key={location.id} position={location.coordinates}>
-                    <Popup>
-                      <div className="p-2">
-                        <h3 className="font-semibold">{location.location}</h3>
-                        <p className="text-sm">{location.info}</p>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Notifications Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Recent Notifications
+      {/* Recent Deliveries */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="bg-white rounded-lg shadow-sm"
+      >
+        <div className="px-6 py-5 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Recent Deliveries
             </h2>
-            <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+            <Link
+              to="/driver/delivery-history"
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
               View All
-            </button>
-          </div>
-          <div className="space-y-4">
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className="border-b border-gray-100 last:border-0 pb-4 last:pb-0"
-              >
-                <p className="text-gray-800">{notification.message}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {notification.time}
-                </p>
-              </div>
-            ))}
+            </Link>
           </div>
         </div>
-      </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tracking ID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Receiver
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Address
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {stats.recentDeliveries.map((delivery) => (
+                <tr key={delivery._id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {delivery.trackingId}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {delivery.receiver.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {delivery.receiver.address}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
+                        delivery.status
+                      )}`}
+                    >
+                      {delivery.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(delivery.updatedAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
     </div>
   );
 };
