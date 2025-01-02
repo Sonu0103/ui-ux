@@ -1,155 +1,146 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import adminService from "../../api/adminService";
 
 const ManageParcels = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterPayment, setFilterPayment] = useState("all");
+  const [parcels, setParcels] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data for parcels
-  const parcels = [
-    {
-      id: "PAR001",
-      senderName: "John Doe",
-      receiverName: "Jane Smith",
-      deliveryStatus: "In Transit",
-      paymentStatus: "Paid",
-      deliveryType: "Express",
-      date: "2024-03-15",
-    },
-    // Add more mock data as needed
-  ];
+  useEffect(() => {
+    loadParcels();
+  }, []);
 
-  const handleDelete = (id) => {
-    // Add delete logic here
-    toast.success(`Parcel ${id} deleted successfully`);
+  const loadParcels = async () => {
+    try {
+      const response = await adminService.getAllParcels();
+      if (response.status === "success") {
+        setParcels(response.data.parcels);
+      }
+    } catch (error) {
+      toast.error("Failed to load parcels");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAssignDriver = async (parcelId) => {
+    try {
+      const response = await adminService.assignParcelToDriver({ parcelId });
+
+      if (response.status === "success") {
+        toast.success(
+          `Parcel assigned to ${response.data.parcel.assignedDriver.name}`
+        );
+        loadParcels(); // Refresh the parcels list
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to assign driver");
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900">Manage Parcels</h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          Add Parcel
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <input
-          type="text"
-          placeholder="Search by ID or Name"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="border border-gray-300 rounded-lg px-4 py-2"
-        />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="border border-gray-300 rounded-lg px-4 py-2"
-        >
-          <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="in-transit">In Transit</option>
-          <option value="delivered">Delivered</option>
-        </select>
-        <select
-          value={filterPayment}
-          onChange={(e) => setFilterPayment(e.target.value)}
-          className="border border-gray-300 rounded-lg px-4 py-2"
-        >
-          <option value="all">All Payments</option>
-          <option value="paid">Paid</option>
-          <option value="unpaid">Unpaid</option>
-        </select>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 className="text-2xl font-semibold text-gray-900 mb-6">
+        Manage Parcels
+      </h1>
 
       {/* Parcels Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Parcel ID
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Tracking ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sender Name
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Sender
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Receiver Name
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Receiver
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Delivery Status
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payment Status
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Payment
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Delivery Type
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Assigned Driver
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {parcels.map((parcel) => (
-                <tr key={parcel.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{parcel.id}</td>
+                <tr key={parcel._id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {parcel.senderName}
+                    {parcel.trackingId}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {parcel.receiverName}
+                    {parcel.sender.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span
+                    {parcel.receiver.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => {
+                        setSelectedParcel(parcel);
+                        setIsStatusModalOpen(true);
+                      }}
                       className={`px-2 py-1 text-xs rounded-full ${
-                        parcel.deliveryStatus === "Delivered"
+                        parcel.status === "delivered"
                           ? "bg-green-100 text-green-800"
-                          : parcel.deliveryStatus === "In Transit"
+                          : parcel.status === "in_transit"
                           ? "bg-yellow-100 text-yellow-800"
                           : "bg-gray-100 text-gray-800"
                       }`}
                     >
-                      {parcel.deliveryStatus}
-                    </span>
+                      {parcel.status}
+                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span
+                    <button
+                      onClick={() => {
+                        setSelectedParcel(parcel);
+                        setIsPaymentModalOpen(true);
+                      }}
                       className={`px-2 py-1 text-xs rounded-full ${
-                        parcel.paymentStatus === "Paid"
+                        parcel.paymentStatus === "paid"
                           ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
                       {parcel.paymentStatus}
-                    </span>
+                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {parcel.deliveryType}
+                    NPR {parcel.amount}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{parcel.date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {parcel.assignedDriver ? (
+                      <span className="text-green-600">
+                        {parcel.assignedDriver.name}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleAssignDriver(parcel._id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        Assign Driver
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <button
-                      onClick={() => {
-                        // Add edit logic
-                      }}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(parcel.id)}
+                      onClick={() => handleDelete(parcel._id)}
                       className="text-red-600 hover:text-red-900"
                     >
                       Delete
@@ -161,31 +152,6 @@ const ManageParcels = () => {
           </table>
         </div>
       </div>
-
-      {/* Add Parcel Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg p-6 w-full max-w-md"
-          >
-            <h2 className="text-xl font-semibold mb-4">Add New Parcel</h2>
-            {/* Add form fields here */}
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg mr-2"
-              >
-                Cancel
-              </button>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg">
-                Save
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 };
