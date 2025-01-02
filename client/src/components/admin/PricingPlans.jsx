@@ -1,55 +1,107 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import adminService from "../../api/adminService";
 
 const PricingPlans = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [plans, setPlans] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    deliveryTime: "",
+    price: "",
+    maxWeight: "",
+    features: [],
+  });
 
-  const plans = [
-    {
-      id: 1,
-      name: "Standard Delivery",
-      deliveryTime: "3-5 business days",
-      price: "NPR 100",
-      features: ["Up to 5kg", "Track & Trace", "Basic Insurance"],
-      color: "from-blue-500 to-blue-400",
-    },
-    {
-      id: 2,
-      name: "Express Delivery",
-      deliveryTime: "1-2 business days",
-      price: "NPR 200",
-      features: ["Up to 10kg", "Priority Handling", "Full Insurance"],
-      color: "from-purple-500 to-purple-400",
-    },
-    {
-      id: 3,
-      name: "Same Day Delivery",
-      deliveryTime: "Within 24 hours",
-      price: "NPR 300",
-      features: ["Up to 15kg", "Instant Pickup", "Premium Insurance"],
-      color: "from-green-500 to-green-400",
-    },
-  ];
+  useEffect(() => {
+    loadPlans();
+  }, []);
 
-  const handleEditPlan = (plan) => {
-    setEditingPlan(plan);
-    setIsModalOpen(true);
+  const loadPlans = async () => {
+    try {
+      setIsLoading(true);
+      const response = await adminService.getAllPricingPlans();
+      if (response.status === "success") {
+        setPlans(response.data.plans);
+      }
+    } catch (error) {
+      toast.error("Failed to load pricing plans");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSavePlan = () => {
-    toast.success("Plan updated successfully!");
-    setIsModalOpen(false);
-    setEditingPlan(null);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const data = {
+        ...formData,
+        price: Number(formData.price),
+        maxWeight: Number(formData.maxWeight),
+        features: formData.features.filter((f) => f.trim()),
+      };
+
+      if (editingPlan) {
+        await adminService.updatePricingPlan(editingPlan._id, data);
+        toast.success("Plan updated successfully");
+      } else {
+        await adminService.createPricingPlan(data);
+        toast.success("Plan created successfully");
+      }
+
+      setIsModalOpen(false);
+      setEditingPlan(null);
+      resetForm();
+      loadPlans();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Operation failed");
+    }
   };
+
+  const handleDelete = async (planId) => {
+    if (window.confirm("Are you sure you want to delete this plan?")) {
+      try {
+        await adminService.deletePricingPlan(planId);
+        toast.success("Plan deleted successfully");
+        loadPlans();
+      } catch (error) {
+        toast.error("Failed to delete plan");
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      deliveryTime: "",
+      price: "",
+      maxWeight: "",
+      features: [],
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Pricing Plans</h1>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            resetForm();
+            setEditingPlan(null);
+            setIsModalOpen(true);
+          }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
           Add New Plan
@@ -60,46 +112,42 @@ const PricingPlans = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.map((plan) => (
           <motion.div
-            key={plan.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            key={plan._id}
             className="bg-white rounded-lg shadow-sm p-6"
           >
             <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                <p className="text-gray-600">{plan.deliveryTime}</p>
+              <h3 className="text-xl font-bold">{plan.name}</h3>
+              <div className="space-x-2">
+                <button
+                  onClick={() => {
+                    setEditingPlan(plan);
+                    setFormData({
+                      name: plan.name,
+                      deliveryTime: plan.deliveryTime,
+                      price: plan.price.toString(),
+                      maxWeight: plan.maxWeight.toString(),
+                      features: plan.features,
+                    });
+                    setIsModalOpen(true);
+                  }}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(plan._id)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  Delete
+                </button>
               </div>
-              <button
-                onClick={() => handleEditPlan(plan)}
-                className="text-blue-600 hover:text-blue-700"
-              >
-                Edit Plan
-              </button>
             </div>
-            <div className={`h-1 bg-gradient-to-r ${plan.color} mb-4`} />
-            <div className="mb-6">
-              <span className="text-3xl font-bold text-gray-900">
-                {plan.price}
-              </span>
-              <span className="text-gray-600">/parcel</span>
-            </div>
-            <ul className="space-y-3">
+            <p className="text-3xl font-bold mb-2">NPR {plan.price}</p>
+            <p className="text-gray-600 mb-4">{plan.deliveryTime}</p>
+            <ul className="space-y-2">
               {plan.features.map((feature, index) => (
-                <li key={index} className="flex items-center text-gray-600">
-                  <svg
-                    className="w-5 h-5 text-green-500 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                <li key={index} className="flex items-center">
+                  <span className="mr-2 text-green-500">✓</span>
                   {feature}
                 </li>
               ))}
@@ -108,7 +156,7 @@ const PricingPlans = () => {
         ))}
       </div>
 
-      {/* Add/Edit Plan Modal */}
+      {/* Edit/Create Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <motion.div
@@ -117,67 +165,116 @@ const PricingPlans = () => {
             className="bg-white rounded-lg p-6 w-full max-w-md"
           >
             <h2 className="text-xl font-semibold mb-4">
-              {editingPlan ? "Edit Plan" : "Add New Plan"}
+              {editingPlan ? "Edit Plan" : "Create New Plan"}
             </h2>
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Plan Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700">
                   Plan Name
                 </label>
                 <input
                   type="text"
-                  defaultValue={editingPlan?.name}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
                 />
               </div>
+
+              {/* Delivery Time */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700">
                   Delivery Time
                 </label>
                 <input
                   type="text"
-                  defaultValue={editingPlan?.deliveryTime}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  value={formData.deliveryTime}
+                  onChange={(e) =>
+                    setFormData({ ...formData, deliveryTime: e.target.value })
+                  }
+                  placeholder="e.g., 2-3 business days"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
                 />
               </div>
+
+              {/* Price */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700">
                   Price (NPR)
                 </label>
                 <input
-                  type="text"
-                  defaultValue={editingPlan?.price.replace("NPR ", "")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: e.target.value })
+                  }
+                  min="0"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
                 />
               </div>
+
+              {/* Max Weight */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  Max Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  value={formData.maxWeight}
+                  onChange={(e) =>
+                    setFormData({ ...formData, maxWeight: e.target.value })
+                  }
+                  min="0"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Features */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
                   Features (one per line)
                 </label>
                 <textarea
-                  defaultValue={editingPlan?.features.join("\n")}
+                  value={formData.features.join("\n")}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      features: e.target.value.split("\n"),
+                    })
+                  }
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                  placeholder="Enter features, one per line"
                 />
               </div>
+
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingPlan(null);
+                    resetForm();
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  {editingPlan ? "Update Plan" : "Create Plan"}
+                </button>
+              </div>
             </form>
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setEditingPlan(null);
-                }}
-                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg mr-2"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSavePlan}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg"
-              >
-                Save Changes
-              </button>
-            </div>
           </motion.div>
         </div>
       )}
