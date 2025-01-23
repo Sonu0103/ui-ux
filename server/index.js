@@ -21,10 +21,11 @@ app.use((req, res, next) => {
 // CORS configuration
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:3000"], // Allow both Vite and standard React ports
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
+    exposedHeaders: ["Content-Range", "X-Content-Range"],
   })
 );
 

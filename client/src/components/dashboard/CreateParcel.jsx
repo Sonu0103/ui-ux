@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { userAPI } from "../../api/apis";
 import toast from "react-hot-toast";
-import userService from "../../api/userService";
+import { useNavigate } from "react-router-dom";
+import { FiPackage, FiTruck, FiDollarSign, FiCheck } from "react-icons/fi";
 
 const CreateParcel = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [createdParcel, setCreatedParcel] = useState(null);
-  const [parcelData, setParcelData] = useState({
+  const [calculatedPrice, setCalculatedPrice] = useState(null);
+  const [formData, setFormData] = useState({
     receiver: {
       name: "",
       email: "",
@@ -21,72 +21,60 @@ const CreateParcel = () => {
     deliveryAddress: "",
     packageDetails: {
       weight: "",
-      dimensions: {
-        length: "",
-        width: "",
-        height: "",
-      },
-      category: "",
+      category: "documents",
       description: "",
     },
     scheduledPickup: {
       date: "",
-      timeSlot: "",
+      timeSlot: "morning",
     },
-    deliveryType: "",
+    deliveryType: "standard",
     amount: 0,
     paymentMethod: "cash_on_delivery",
   });
 
-  const [pricingDetails, setPricingDetails] = useState(null);
-
-  const handleInputChange = (e, section, subsection) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    if (section && subsection) {
-      setParcelData((prev) => ({
+    if (name.includes(".")) {
+      const [section, field] = name.split(".");
+      setFormData((prev) => ({
         ...prev,
         [section]: {
           ...prev[section],
-          [subsection]: {
-            ...prev[section][subsection],
-            [name]: value,
-          },
-        },
-      }));
-    } else if (section) {
-      setParcelData((prev) => ({
-        ...prev,
-        [section]: {
-          ...prev[section],
-          [name]: value,
+          [field]: value,
         },
       }));
     } else {
-      setParcelData((prev) => ({
+      setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
     }
   };
 
-  const calculateCost = async () => {
+  const calculatePrice = async () => {
     try {
       setIsLoading(true);
-      const response = await userService.calculateParcelCost({
-        weight: parseFloat(parcelData.packageDetails.weight),
-        deliveryType: parcelData.deliveryType,
+      const response = await userAPI.calculateParcelCost({
+        weight: formData.packageDetails.weight,
+        category: formData.packageDetails.category,
+        deliveryType: formData.deliveryType,
       });
 
       if (response.status === "success") {
-        setPricingDetails(response.data);
-        setParcelData((prev) => ({
+        const calculatedAmount = response.data.amount;
+        setCalculatedPrice(calculatedAmount);
+        // Set the amount in the form data
+        setFormData((prev) => ({
           ...prev,
-          amount: response.data.amount,
+          amount: calculatedAmount,
         }));
-        setStep(4); // Move to payment step
+        nextStep(); // Move to confirmation step
+        toast.success("Price calculated successfully!");
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to calculate cost");
+      console.error("Error calculating price:", error);
+      toast.error(error.response?.data?.message || "Failed to calculate price");
     } finally {
       setIsLoading(false);
     }
@@ -96,141 +84,101 @@ const CreateParcel = () => {
     e.preventDefault();
     try {
       setIsLoading(true);
-      const response = await userService.createParcel(parcelData);
+      const response = await userAPI.createParcel({
+        receiver: formData.receiver,
+        pickupAddress: formData.pickupAddress,
+        deliveryAddress: formData.deliveryAddress,
+        packageDetails: formData.packageDetails,
+        scheduledPickup: formData.scheduledPickup,
+        paymentMethod: formData.paymentMethod,
+        amount: formData.amount,
+        deliveryType: formData.deliveryType,
+      });
+
       if (response.status === "success") {
-        setCreatedParcel(response.data.parcel);
-        setShowSuccess(true);
         toast.success("Parcel created successfully!");
+        navigate("/dashboard/orders");
       }
     } catch (error) {
+      console.error("Error creating parcel:", error);
       toast.error(error.response?.data?.message || "Failed to create parcel");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoToOrders = () => {
-    navigate("/dashboard/orders");
-  };
+  const steps = [
+    { number: 1, title: "Receiver Details" },
+    { number: 2, title: "Pickup & Delivery" },
+    { number: 3, title: "Package Details" },
+    { number: 4, title: "Confirmation" },
+  ];
 
-  if (showSuccess && createdParcel) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-lg shadow-md p-8"
-        >
-          <div className="text-center mb-8">
-            <div className="mb-4">
-              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-green-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, 4));
+  const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      {/* Progress Steps */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center">
+          {steps.map((step, index) => (
+            <div key={step.number} className="flex-1 relative">
+              <div className="flex items-center">
+                <motion.div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                    currentStep >= step.number
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: currentStep === step.number ? 1.1 : 1 }}
+                  transition={{ duration: 0.3 }}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
+                  {step.number}
+                </motion.div>
+                <div className="flex-1">
+                  <div
+                    className={`h-1 ${
+                      index < steps.length - 1
+                        ? currentStep > step.number
+                          ? "bg-blue-600"
+                          : "bg-gray-200"
+                        : "hidden"
+                    }`}
                   />
-                </svg>
+                </div>
               </div>
+              <p
+                className={`mt-2 text-sm font-medium ${
+                  currentStep >= step.number ? "text-blue-600" : "text-gray-500"
+                }`}
+              >
+                {step.title}
+              </p>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Parcel Created Successfully!
-            </h2>
-            <p className="text-gray-600">
-              Your parcel has been created with tracking ID:{" "}
-              <span className="font-semibold">{createdParcel.trackingId}</span>
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Receiver Details</h3>
-              <div className="space-y-3">
-                <p>
-                  <span className="text-gray-600">Name:</span>{" "}
-                  {createdParcel.receiver.name}
-                </p>
-                <p>
-                  <span className="text-gray-600">Email:</span>{" "}
-                  {createdParcel.receiver.email}
-                </p>
-                <p>
-                  <span className="text-gray-600">Phone:</span>{" "}
-                  {createdParcel.receiver.phone}
-                </p>
-                <p>
-                  <span className="text-gray-600">Address:</span>{" "}
-                  {createdParcel.receiver.address}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Package Details</h3>
-              <div className="space-y-3">
-                <p>
-                  <span className="text-gray-600">Weight:</span>{" "}
-                  {createdParcel.packageDetails.weight} kg
-                </p>
-                <p>
-                  <span className="text-gray-600">Category:</span>{" "}
-                  {createdParcel.packageDetails.category}
-                </p>
-                <p>
-                  <span className="text-gray-600">Delivery Type:</span>{" "}
-                  {createdParcel.deliveryType}
-                </p>
-                <p>
-                  <span className="text-gray-600">Amount:</span> NPR{" "}
-                  {createdParcel.amount}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">Delivery Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <p className="text-gray-600">Pickup Address</p>
-                <p>{createdParcel.pickupAddress}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Delivery Address</p>
-                <p>{createdParcel.deliveryAddress}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 text-center">
-            <button
-              onClick={handleGoToOrders}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
-            >
-              Go to My Orders
-            </button>
-          </div>
-        </motion.div>
+          ))}
+        </div>
       </div>
-    );
-  }
 
-  const renderStep = () => {
-    switch (step) {
-      case 1:
-        return (
+      {/* Form Container */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-white rounded-2xl shadow-sm p-8"
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Step 1: Receiver Details */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-lg shadow p-6"
+            initial={{ opacity: 0, x: currentStep === 1 ? 20 : -20 }}
+            animate={{ opacity: currentStep === 1 ? 1 : 0, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className={currentStep === 1 ? "block" : "hidden"}
           >
-            <h2 className="text-lg font-semibold mb-4">Receiver Details</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">
+              Receiver Details
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -238,10 +186,10 @@ const CreateParcel = () => {
                 </label>
                 <input
                   type="text"
-                  name="name"
-                  value={parcelData.receiver.name}
-                  onChange={(e) => handleInputChange(e, "receiver")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  name="receiver.name"
+                  value={formData.receiver.name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
@@ -251,10 +199,10 @@ const CreateParcel = () => {
                 </label>
                 <input
                   type="email"
-                  name="email"
-                  value={parcelData.receiver.email}
-                  onChange={(e) => handleInputChange(e, "receiver")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  name="receiver.email"
+                  value={formData.receiver.email}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
@@ -264,10 +212,10 @@ const CreateParcel = () => {
                 </label>
                 <input
                   type="tel"
-                  name="phone"
-                  value={parcelData.receiver.phone}
-                  onChange={(e) => handleInputChange(e, "receiver")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  name="receiver.phone"
+                  value={formData.receiver.phone}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
@@ -276,26 +224,99 @@ const CreateParcel = () => {
                   Address
                 </label>
                 <textarea
-                  name="address"
-                  value={parcelData.receiver.address}
-                  onChange={(e) => handleInputChange(e, "receiver")}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  name="receiver.address"
+                  value={formData.receiver.address}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  rows="2"
                   required
                 />
               </div>
             </div>
           </motion.div>
-        );
 
-      case 2:
-        return (
+          {/* Step 2: Pickup & Delivery */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-lg shadow p-6"
+            initial={{ opacity: 0, x: currentStep === 2 ? 20 : -20 }}
+            animate={{ opacity: currentStep === 2 ? 1 : 0, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className={currentStep === 2 ? "block" : "hidden"}
           >
-            <h2 className="text-lg font-semibold mb-4">Package Details</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">
+              Pickup & Delivery Details
+            </h2>
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Pickup Address
+                </label>
+                <textarea
+                  name="pickupAddress"
+                  value={formData.pickupAddress}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  rows="2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Delivery Address
+                </label>
+                <textarea
+                  name="deliveryAddress"
+                  value={formData.deliveryAddress}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  rows="2"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pickup Date
+                  </label>
+                  <input
+                    type="date"
+                    name="scheduledPickup.date"
+                    value={formData.scheduledPickup.date}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required
+                    min={new Date().toISOString().split("T")[0]}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pickup Time Slot
+                  </label>
+                  <select
+                    name="scheduledPickup.timeSlot"
+                    value={formData.scheduledPickup.timeSlot}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required
+                  >
+                    <option value="morning">Morning (9 AM - 12 PM)</option>
+                    <option value="afternoon">Afternoon (12 PM - 3 PM)</option>
+                    <option value="evening">Evening (3 PM - 6 PM)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Step 3: Package Details */}
+          <motion.div
+            initial={{ opacity: 0, x: currentStep === 3 ? 20 : -20 }}
+            animate={{ opacity: currentStep === 3 ? 1 : 0, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className={currentStep === 3 ? "block" : "hidden"}
+          >
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">
+              Package Details
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -303,11 +324,13 @@ const CreateParcel = () => {
                 </label>
                 <input
                   type="number"
-                  name="weight"
-                  value={parcelData.packageDetails.weight}
-                  onChange={(e) => handleInputChange(e, "packageDetails")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  name="packageDetails.weight"
+                  value={formData.packageDetails.weight}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   required
+                  min="0.1"
+                  step="0.1"
                 />
               </div>
               <div>
@@ -315,13 +338,12 @@ const CreateParcel = () => {
                   Category
                 </label>
                 <select
-                  name="category"
-                  value={parcelData.packageDetails.category}
-                  onChange={(e) => handleInputChange(e, "packageDetails")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  name="packageDetails.category"
+                  value={formData.packageDetails.category}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   required
                 >
-                  <option value="">Select Category</option>
                   <option value="documents">Documents</option>
                   <option value="electronics">Electronics</option>
                   <option value="fragile">Fragile</option>
@@ -333,81 +355,13 @@ const CreateParcel = () => {
                   Description
                 </label>
                 <textarea
-                  name="description"
-                  value={parcelData.packageDetails.description}
-                  onChange={(e) => handleInputChange(e, "packageDetails")}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-          </motion.div>
-        );
-
-      case 3:
-        return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-lg shadow p-6"
-          >
-            <h2 className="text-lg font-semibold mb-4">Pickup & Delivery</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pickup Address
-                </label>
-                <textarea
-                  name="pickupAddress"
-                  value={parcelData.pickupAddress}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  name="packageDetails.description"
+                  value={formData.packageDetails.description}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  rows="3"
                   required
                 />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Delivery Address
-                </label>
-                <textarea
-                  name="deliveryAddress"
-                  value={parcelData.deliveryAddress}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pickup Date
-                </label>
-                <input
-                  type="date"
-                  name="date"
-                  value={parcelData.scheduledPickup.date}
-                  onChange={(e) => handleInputChange(e, "scheduledPickup")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Time Slot
-                </label>
-                <select
-                  name="timeSlot"
-                  value={parcelData.scheduledPickup.timeSlot}
-                  onChange={(e) => handleInputChange(e, "scheduledPickup")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select Time Slot</option>
-                  <option value="morning">Morning (9 AM - 12 PM)</option>
-                  <option value="afternoon">Afternoon (12 PM - 3 PM)</option>
-                  <option value="evening">Evening (3 PM - 6 PM)</option>
-                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -415,142 +369,202 @@ const CreateParcel = () => {
                 </label>
                 <select
                   name="deliveryType"
-                  value={parcelData.deliveryType}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.deliveryType}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   required
                 >
                   <option value="standard">Standard Delivery</option>
                   <option value="express">Express Delivery</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Method
+                </label>
+                <select
+                  name="paymentMethod"
+                  value={formData.paymentMethod}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  required
+                >
+                  <option value="cash_on_delivery">Cash on Delivery</option>
+                  <option value="online_payment">Online Payment</option>
+                </select>
+              </div>
             </div>
           </motion.div>
-        );
 
-      case 4:
-        return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-lg shadow p-6"
-          >
-            <h2 className="text-lg font-semibold mb-4">Payment Details</h2>
-            {pricingDetails && (
-              <div className="space-y-6">
-                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Selected Plan: {pricingDetails.pricingPlan.name}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Delivery Time: {pricingDetails.pricingPlan.deliveryTime}
-                  </p>
-                  <div className="text-sm text-gray-600">
-                    <p className="font-medium">Features:</p>
-                    <ul className="list-disc list-inside">
-                      {pricingDetails.pricingPlan.features.map(
-                        (feature, index) => (
-                          <li key={index}>{feature}</li>
-                        )
-                      )}
-                    </ul>
-                  </div>
-                  <div className="border-t pt-3 mt-3">
-                    <p className="text-sm text-gray-600">
-                      Base Price: NPR {pricingDetails.pricingPlan.basePrice}
-                    </p>
-                    {parcelData.deliveryType === "express" && (
-                      <p className="text-sm text-gray-600">
-                        Express Delivery: +50%
-                      </p>
-                    )}
-                    <p className="text-lg font-bold text-gray-900 mt-2">
-                      Total Amount: NPR {pricingDetails.amount}
-                    </p>
+          {/* Step 4: Confirmation */}
+          {currentStep === 4 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-2xl font-semibold text-gray-800 mb-6">
+                  Order Confirmation
+                </h3>
+
+                <div className="mb-8 bg-blue-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-medium text-gray-700">
+                      Total Amount:
+                    </span>
+                    <span className="text-2xl font-bold text-blue-600">
+                      Rs. {calculatedPrice}
+                    </span>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Method
-                  </label>
-                  <select
-                    name="paymentMethod"
-                    value={parcelData.paymentMethod}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="cash_on_delivery">Cash on Delivery</option>
-                    <option value="online_payment">Online Payment</option>
-                  </select>
+
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3">
+                      Receiver Details
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 text-gray-600">
+                      <div>
+                        <span className="font-medium">Name:</span>{" "}
+                        {formData.receiver.name}
+                      </div>
+                      <div>
+                        <span className="font-medium">Phone:</span>{" "}
+                        {formData.receiver.phone}
+                      </div>
+                      <div>
+                        <span className="font-medium">Email:</span>{" "}
+                        {formData.receiver.email}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3">
+                      Package Details
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 text-gray-600">
+                      <div>
+                        <span className="font-medium">Weight:</span>{" "}
+                        {formData.packageDetails.weight} kg
+                      </div>
+                      <div>
+                        <span className="font-medium">Category:</span>{" "}
+                        {formData.packageDetails.category}
+                      </div>
+                      <div>
+                        <span className="font-medium">Delivery Type:</span>{" "}
+                        {formData.deliveryType}
+                      </div>
+                      <div>
+                        <span className="font-medium">Fragile:</span>{" "}
+                        {formData.packageDetails.isFragile ? "Yes" : "No"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3">
+                      Delivery Information
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 text-gray-600">
+                      <div>
+                        <span className="font-medium">Pickup Address:</span>{" "}
+                        {formData.pickupAddress}
+                      </div>
+                      <div>
+                        <span className="font-medium">Delivery Address:</span>{" "}
+                        {formData.deliveryAddress}
+                      </div>
+                      <div>
+                        <span className="font-medium">Pickup Date:</span>{" "}
+                        {formData.scheduledPickup.date}
+                      </div>
+                      <div>
+                        <span className="font-medium">Time Slot:</span>{" "}
+                        {formData.scheduledPickup.timeSlot}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3">
+                      Payment
+                    </h4>
+                    <div className="text-gray-600">
+                      <span className="font-medium">Payment Method:</span>{" "}
+                      {formData.paymentMethod}
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-          </motion.div>
-        );
+            </motion.div>
+          )}
 
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Create New Parcel</h1>
-        <div className="mt-4 flex gap-2">
-          {[
-            "Receiver Details",
-            "Package Details",
-            "Pickup & Delivery",
-            "Payment",
-          ].map((label, index) => (
-            <div
-              key={index}
-              className={`flex-1 h-2 rounded-full ${
-                index + 1 <= step ? "bg-blue-500" : "bg-gray-200"
+          {/* Navigation Buttons */}
+          <div className="flex justify-between pt-6">
+            <button
+              type="button"
+              onClick={prevStep}
+              className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                currentStep === 1
+                  ? "opacity-50 cursor-not-allowed bg-gray-100 text-gray-400"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
-            />
-          ))}
-        </div>
-      </div>
-
-      <form onSubmit={step === 4 ? handleSubmit : (e) => e.preventDefault()}>
-        {renderStep()}
-
-        <div className="mt-6 flex justify-end space-x-4">
-          {step > 1 && (
-            <button
-              type="button"
-              onClick={() => setStep((prev) => prev - 1)}
-              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              disabled={isLoading}
+              disabled={currentStep === 1}
             >
-              Back
+              Previous
             </button>
-          )}
-          {step < 4 ? (
-            <button
-              type="button"
-              onClick={
-                step === 3 ? calculateCost : () => setStep((prev) => prev + 1)
-              }
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              disabled={isLoading}
-            >
-              {step === 3 ? "Calculate Cost" : "Next"}
-            </button>
-          ) : (
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              disabled={isLoading}
-            >
-              {isLoading ? "Creating..." : "Create Parcel"}
-            </button>
-          )}
-        </div>
-      </form>
+            {currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={nextStep}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
+              >
+                Next
+              </button>
+            ) : currentStep === 3 ? (
+              <button
+                type="button"
+                onClick={calculatePrice}
+                disabled={isLoading}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all flex items-center space-x-2"
+              >
+                {isLoading ? (
+                  <>
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                    <span>Calculating...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiDollarSign className="w-5 h-5" />
+                    <span>Calculate Price</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all flex items-center space-x-2"
+              >
+                {isLoading ? (
+                  <>
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                    <span>Creating...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiCheck className="w-5 h-5" />
+                    <span>Confirm & Create</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </form>
+      </motion.div>
     </div>
   );
 };

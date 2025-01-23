@@ -140,13 +140,30 @@ exports.createParcel = async (req, res) => {
       throw new Error("Failed to generate tracking ID");
     }
 
+    // Create payment record
+    const payment = await Payment.create({
+      parcel: parcel._id,
+      user: req.user._id,
+      amount: req.body.amount,
+      method: req.body.paymentMethod || "cash_on_delivery",
+      status: "pending",
+    });
+
+    // Add payment reference to parcel
+    parcel.payment = payment._id;
+    parcel.paymentStatus = "pending";
+    parcel.amount = req.body.amount;
+    await parcel.save();
+
     res.status(201).json({
       status: "success",
       data: {
         parcel,
+        payment,
       },
     });
   } catch (error) {
+    console.error("Create parcel error:", error);
     res.status(500).json({
       status: "error",
       message: error.message || "Failed to create parcel",
@@ -233,23 +250,67 @@ exports.trackParcel = async (req, res) => {
 
 exports.getPaymentHistory = async (req, res) => {
   try {
+    // Find all payments for the user, regardless of status
     const payments = await Payment.find({ user: req.user._id })
+      .select("amount method status createdAt updatedAt transactionId")
       .populate({
         path: "parcel",
-        select: "trackingId receiver.name deliveryAddress",
+        select:
+          "trackingId receiver deliveryAddress status amount paymentMethod createdAt",
+        populate: [
+          {
+            path: "assignedDriver",
+            select: "name",
+          },
+          {
+            path: "sender",
+            select: "name email",
+          },
+        ],
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Always return an array, even if empty
+    const paymentsList = payments || [];
+
+    // Calculate statistics including all transactions
+    const stats = {
+      totalAmount: paymentsList.reduce(
+        (sum, payment) => sum + (payment.amount || 0),
+        0
+      ),
+      totalPayments: paymentsList.length,
+      pendingAmount: paymentsList
+        .filter((payment) => payment.status === "pending")
+        .reduce((sum, payment) => sum + (payment.amount || 0), 0),
+      completedAmount: paymentsList
+        .filter((payment) => payment.status === "completed")
+        .reduce((sum, payment) => sum + (payment.amount || 0), 0),
+      pendingCount: paymentsList.filter(
+        (payment) => payment.status === "pending"
+      ).length,
+      completedCount: paymentsList.filter(
+        (payment) => payment.status === "completed"
+      ).length,
+    };
+
+    // Log for debugging
+    console.log("Found payments:", paymentsList.length);
+    console.log("Stats:", stats);
 
     res.status(200).json({
       status: "success",
       data: {
-        payments,
+        payments: paymentsList,
+        stats,
       },
     });
   } catch (error) {
+    console.error("Payment History Error:", error);
     res.status(500).json({
       status: "error",
-      message: error.message,
+      message: "Failed to fetch payment history. " + error.message,
     });
   }
 };

@@ -22,5 +22,6 @@ router.patch("/users/:id/status", adminController.updateUserStatus);
 router.delete("/users/:id", adminController.deleteUser);
 router.post("/assign-parcel", adminController.assignParcelToDriver);
 router.get("/drivers", adminController.getDrivers);
+router.get("/reports", adminController.getReports);
 
 module.exports = router;

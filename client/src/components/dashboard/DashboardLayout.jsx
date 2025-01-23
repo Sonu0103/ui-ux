@@ -2,23 +2,24 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/logoo.png";
 import { toast } from "react-hot-toast";
-import authService from "../../api/authService";
+import { authAPI } from "../../api/apis";
 
 const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const currentUser = authService.getCurrentUser();
+        const currentUser = authAPI.getCurrentUser();
         if (currentUser) {
           setUserData(currentUser);
         }
 
-        const response = await authService.getProfile();
+        const response = await authAPI.getProfile();
         if (response.status === "success") {
           setUserData(response.data.user);
         }
@@ -40,32 +41,54 @@ const DashboardLayout = ({ children }) => {
   ];
 
   const handleLogout = () => {
-    authService.logout();
+    authAPI.logout();
     toast.success("Logged out successfully");
-    navigate("/login");
+    navigate("/");
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-sm fixed h-full">
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white transform ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0 transition-transform duration-300 ease-in-out shadow-lg`}
+      >
         {/* Logo */}
-        <div className="flex items-center p-6 border-b">
-          <img src={logo} alt="Logo" className="h-8 w-8" />
-          <span className="ml-2 text-xl font-bold text-gray-800">
-            NepXpress
-          </span>
+        <div className="flex items-center justify-between p-6 border-b">
+          <Link to="/" className="flex items-center space-x-3">
+            <img src={logo} alt="Logo" className="h-8 w-8" />
+            <span className="text-xl font-bold text-gray-800">NepXpress</span>
+          </Link>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden text-gray-500 hover:text-gray-700"
+          >
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
         </div>
 
         {/* Navigation Links */}
-        <nav className="mt-6">
+        <nav className="mt-6 px-4">
           {navigation.map((item) => (
             <Link
               key={item.name}
               to={item.href}
-              className={`flex items-center px-6 py-3 text-sm font-medium ${
+              className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg mb-2 transition-colors ${
                 location.pathname === item.href
-                  ? "text-blue-600 bg-blue-50 border-r-4 border-blue-600"
+                  ? "text-blue-600 bg-blue-50"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
               }`}
             >
@@ -77,27 +100,53 @@ const DashboardLayout = ({ children }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 ml-64">
+      <div className="md:pl-64 flex flex-col min-h-screen">
         {/* Top Bar */}
-        <div className="bg-white shadow-sm h-16 fixed right-0 left-64 top-0 z-10">
-          <div className="flex justify-end h-full px-6">
-            {/* Profile Dropdown */}
+        <header className="sticky top-0 z-40 bg-white shadow-sm">
+          <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="md:hidden text-gray-500 hover:text-gray-700"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Profile Section - Now on the right */}
+            <div className="flex items-center ml-auto">
               <div className="relative">
                 <button
                   onClick={() =>
                     setIsProfileDropdownOpen(!isProfileDropdownOpen)
                   }
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-4 focus:outline-none group"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  <div className="hidden md:block text-right mr-3">
+                    <p className="text-sm font-medium text-gray-700 group-hover:text-blue-600">
+                      {userData?.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{userData?.email}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all">
                     {userData?.photo ? (
                       <img
                         src={`http://localhost:5000${userData.photo}`}
                         alt="Profile"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          console.error("Profile image load error");
                           e.target.src = "";
                           e.target.onerror = null;
                           e.target.parentElement.innerHTML = "👤";
@@ -107,24 +156,27 @@ const DashboardLayout = ({ children }) => {
                       <span className="text-xl">👤</span>
                     )}
                   </div>
-                  {userData && (
-                    <span className="text-sm font-medium text-gray-700">
-                      {userData.name}
-                    </span>
-                  )}
                 </button>
 
                 {isProfileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border">
+                    <Link
+                      to="/"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                    >
+                      Home Page
+                    </Link>
                     <Link
                       to="/dashboard/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setIsProfileDropdownOpen(false)}
                     >
                       Profile Settings
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
                     >
                       Logout
                     </button>
@@ -133,10 +185,10 @@ const DashboardLayout = ({ children }) => {
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
         {/* Page Content */}
-        <div className="pt-16 p-8">{children}</div>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

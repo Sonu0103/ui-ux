@@ -11,7 +11,6 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 import DashboardHome from "./components/dashboard/DashboardHome";
 import CreateParcel from "./components/dashboard/CreateParcel";
 import TrackParcel from "./components/dashboard/TrackParcel";
-import Orders from "./components/dashboard/Orders";
 import PaymentHistory from "./components/dashboard/PaymentHistory";
 import Profile from "./components/dashboard/Profile";
 import Signup from "./components/auth/Signup";
@@ -28,220 +27,212 @@ import DriverDashboard from "./components/driver/DriverDashboard";
 import AssignedParcels from "./components/driver/AssignedParcels";
 import DeliveryHistory from "./components/driver/DeliveryHistory";
 import DriverProfile from "./components/driver/Profile";
-import DriverSettings from "./components/driver/Settings";
 import ForgotPassword from "./components/auth/ForgotPassword";
-import PaymentMethod from "./components/dashboard/PaymentMethod";
-import ParcelConfirmation from "./components/dashboard/ParcelConfirmation";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MyOrders from "./components/dashboard/MyOrders";
 
-function App() {
-  return (
-    <Router>
-      <Toaster position="top-right" />
-      <Routes>
-        {/* Public Routes */}
-        <Route
-          path="/"
-          element={
-            <div className="min-h-screen bg-gray-50">
-              <Navbar />
-              <main>
-                <Hero />
-                <Features />
-                <HowItWorks />
-                <Pricing />
-                <Contact />
-              </main>
-              <Footer />
-            </div>
-          }
-        />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+const App = () => (
+  <Router>
+    <Toaster position="top-right" />
+    <Routes>
+      {/* Public Routes */}
+      <Route
+        path="/"
+        element={
+          <div className="min-h-screen bg-gray-50">
+            <Navbar />
+            <main>
+              <Hero />
+              <Features />
+              <HowItWorks />
+              <Pricing />
+              <Contact />
+            </main>
+            <Footer />
+          </div>
+        }
+      />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Dashboard Routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["user"]}>
-              <DashboardLayout>
-                <DashboardHome />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/create-parcel"
-          element={
-            <ProtectedRoute allowedRoles={["user"]}>
-              <DashboardLayout>
-                <CreateParcel />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/track-parcel/:trackingId?"
-          element={
-            <ProtectedRoute allowedRoles={["user"]}>
-              <DashboardLayout>
-                <TrackParcel />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/orders"
-          element={
-            <ProtectedRoute allowedRoles={["user"]}>
-              <DashboardLayout>
-                <MyOrders />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/payments"
-          element={
+      {/* Dashboard Routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={["user"]}>
+            <DashboardLayout>
+              <DashboardHome />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/create-parcel"
+        element={
+          <ProtectedRoute allowedRoles={["user"]}>
+            <DashboardLayout>
+              <CreateParcel />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/track-parcel/:trackingId?"
+        element={
+          <ProtectedRoute allowedRoles={["user"]}>
+            <DashboardLayout>
+              <TrackParcel />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/orders"
+        element={
+          <ProtectedRoute allowedRoles={["user"]}>
+            <DashboardLayout>
+              <MyOrders />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/payments"
+        element={
+          <ProtectedRoute allowedRoles={["user"]}>
             <DashboardLayout>
               <PaymentHistory />
             </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/profile"
-          element={
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/profile"
+        element={
+          <ProtectedRoute allowedRoles={["user"]}>
             <DashboardLayout>
               <Profile />
             </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/payment-method"
-          element={
-            <DashboardLayout>
-              <PaymentMethod />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/confirmation"
-          element={
-            <DashboardLayout>
-              <ParcelConfirmation />
-            </DashboardLayout>
-          }
-        />
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboardLayout>
-                <AdminDashboard />
-              </AdminDashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/parcels"
-          element={
+      {/* Admin Routes */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminDashboardLayout>
+              <AdminDashboard />
+            </AdminDashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/parcels"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
             <AdminDashboardLayout>
               <ManageParcels />
             </AdminDashboardLayout>
-          }
-        />
-        <Route
-          path="/admin/pricing"
-          element={
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/pricing"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
             <AdminDashboardLayout>
               <PricingPlans />
             </AdminDashboardLayout>
-          }
-        />
-        <Route
-          path="/admin/users"
-          element={
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
             <AdminDashboardLayout>
               <UsersManagement />
             </AdminDashboardLayout>
-          }
-        />
-        <Route
-          path="/admin/reports"
-          element={
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/reports"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
             <AdminDashboardLayout>
               <Reports />
             </AdminDashboardLayout>
-          }
-        />
-        <Route
-          path="/admin/settings"
-          element={
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
             <AdminDashboardLayout>
               <Settings />
             </AdminDashboardLayout>
-          }
-        />
-        <Route
-          path="/admin/profile"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboardLayout>
-                <Profile />
-              </AdminDashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/profile"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminDashboardLayout>
+              <Profile />
+            </AdminDashboardLayout>
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-          path="/driver/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["driver"]}>
-              <DriverDashboardLayout>
-                <DriverDashboard />
-              </DriverDashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/driver/assigned-parcels"
-          element={
+      {/* Driver Routes */}
+      <Route
+        path="/driver/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={["driver"]}>
+            <DriverDashboardLayout>
+              <DriverDashboard />
+            </DriverDashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/driver/assigned-parcels"
+        element={
+          <ProtectedRoute allowedRoles={["driver"]}>
             <DriverDashboardLayout>
               <AssignedParcels />
             </DriverDashboardLayout>
-          }
-        />
-        <Route
-          path="/driver/delivery-history"
-          element={
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/driver/delivery-history"
+        element={
+          <ProtectedRoute allowedRoles={["driver"]}>
             <DriverDashboardLayout>
               <DeliveryHistory />
             </DriverDashboardLayout>
-          }
-        />
-        <Route
-          path="/driver/profile"
-          element={
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/driver/profile"
+        element={
+          <ProtectedRoute allowedRoles={["driver"]}>
             <DriverDashboardLayout>
               <DriverProfile />
             </DriverDashboardLayout>
-          }
-        />
-        <Route
-          path="/driver/settings"
-          element={
-            <DriverDashboardLayout>
-              <DriverSettings />
-            </DriverDashboardLayout>
-          }
-        />
-
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-      </Routes>
-    </Router>
-  );
-}
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  </Router>
+);
 
 export default App;

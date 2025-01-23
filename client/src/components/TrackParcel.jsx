@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import userService from "../api/userService";
+import { userAPI } from "../api/apis";
 
 const TrackParcel = () => {
   const { trackingId } = useParams();
@@ -20,7 +20,7 @@ const TrackParcel = () => {
 
     try {
       setIsLoading(true);
-      const response = await userService.trackParcel(searchId);
+      const response = await userAPI.trackParcel(searchId);
       if (response.status === "success") {
         setParcel(response.data.parcel);
         if (!trackingId) {

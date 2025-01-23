@@ -2,6 +2,16 @@ const User = require("../models/User");
 const Parcel = require("../models/Parcel");
 const Notification = require("../models/Notification");
 const Payment = require("../models/Payment");
+const { PARCEL_STATUSES } = require("../models/Parcel");
+
+// Status transition validation
+const VALID_TRANSITIONS = {
+  pending: ["picked_up"],
+  picked_up: ["in_transit"],
+  in_transit: ["delivered"],
+  delivered: [], // No further transitions allowed
+  cancelled: [], // No further transitions allowed
+};
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -76,26 +86,18 @@ exports.getDashboardStats = async (req, res) => {
 
 exports.getAssignedParcels = async (req, res) => {
   try {
-    const parcels = await Parcel.find({
-      assignedDriver: req.user._id,
-      // Include all relevant statuses
-      status: { $in: ["pending", "in_transit", "out_for_delivery"] },
-    })
+    const parcels = await Parcel.find({ assignedDriver: req.user._id })
       .sort({ createdAt: -1 })
-      .populate("sender", "name email")
-      .select("-__v");
-
-    console.log("Found parcels:", parcels); // For debugging
+      .populate("statusHistory.updatedBy", "name");
 
     res.status(200).json({
       status: "success",
-      results: parcels.length,
       data: {
         parcels,
       },
     });
   } catch (error) {
-    console.error("Error in getAssignedParcels:", error);
+    console.error("Get assigned parcels error:", error);
     res.status(500).json({
       status: "error",
       message: error.message,
@@ -105,10 +107,21 @@ exports.getAssignedParcels = async (req, res) => {
 
 exports.updateParcelStatus = async (req, res) => {
   try {
-    const { parcelId } = req.params;
+    const { id } = req.params;
     const { status } = req.body;
 
-    const parcel = await Parcel.findById(parcelId);
+    // Validate status exists in PARCEL_STATUSES
+    if (!PARCEL_STATUSES.includes(status)) {
+      return res.status(400).json({
+        status: "error",
+        message: `Invalid status value. Must be one of: ${PARCEL_STATUSES.join(
+          ", "
+        )}`,
+      });
+    }
+
+    // Find parcel and validate existence
+    const parcel = await Parcel.findById(id);
     if (!parcel) {
       return res.status(404).json({
         status: "error",
@@ -116,52 +129,57 @@ exports.updateParcelStatus = async (req, res) => {
       });
     }
 
-    if (parcel.assignedDriver.toString() !== req.user._id.toString()) {
+    // Check if driver is assigned to this parcel
+    if (
+      !parcel.assignedDriver ||
+      parcel.assignedDriver.toString() !== req.user._id.toString()
+    ) {
       return res.status(403).json({
         status: "error",
-        message: "Not authorized to update this parcel",
+        message: "You are not authorized to update this parcel",
       });
     }
 
-    // Update parcel status
+    // Validate status transition
+    if (!VALID_TRANSITIONS[parcel.status]?.includes(status)) {
+      return res.status(400).json({
+        status: "error",
+        message: `Invalid status transition from ${parcel.status} to ${status}`,
+      });
+    }
+
+    // Update parcel
     parcel.status = status;
     parcel.statusHistory.push({
       status,
       updatedBy: req.user._id,
       notes: `Status updated to ${status} by driver`,
+      timestamp: new Date(),
     });
 
-    await parcel.save();
-
-    // Create notifications
-    await Notification.create({
-      user: parcel.sender,
-      title: "Parcel Status Update",
-      message: `Your parcel (${parcel.trackingId}) has been marked as ${status}`,
-      type: "parcel_update",
-      parcel: parcelId,
-    });
+    // Save the updated parcel
+    const updatedParcel = await parcel.save();
 
     res.status(200).json({
       status: "success",
       data: {
-        parcel,
+        parcel: updatedParcel,
       },
     });
   } catch (error) {
+    console.error("Update parcel status error:", error);
     res.status(500).json({
       status: "error",
-      message: error.message,
+      message: error.message || "Failed to update parcel status",
     });
   }
 };
 
 exports.updateParcelPayment = async (req, res) => {
   try {
-    const { parcelId } = req.params;
-    const { paymentStatus } = req.body;
+    const { id } = req.params;
 
-    const parcel = await Parcel.findById(parcelId);
+    const parcel = await Parcel.findById(id);
     if (!parcel) {
       return res.status(404).json({
         status: "error",
@@ -169,58 +187,59 @@ exports.updateParcelPayment = async (req, res) => {
       });
     }
 
-    if (parcel.assignedDriver.toString() !== req.user._id.toString()) {
+    // Check if driver is assigned to this parcel
+    if (
+      !parcel.assignedDriver ||
+      parcel.assignedDriver.toString() !== req.user._id.toString()
+    ) {
       return res.status(403).json({
         status: "error",
-        message: "Not authorized to update this parcel",
+        message: "You are not authorized to update this parcel",
       });
     }
 
-    if (parcel.status !== "delivered" && paymentStatus === "paid") {
+    // Validate parcel is delivered
+    if (parcel.status !== "delivered") {
       return res.status(400).json({
         status: "error",
-        message: "Parcel must be delivered before marking payment as paid",
+        message: "Parcel must be delivered before marking payment as received",
       });
     }
 
-    // Update payment status
-    parcel.paymentStatus = paymentStatus;
+    // Update payment status in parcel
+    parcel.paymentStatus = "completed";
 
-    // Create a payment record
-    if (paymentStatus === "paid") {
-      await Payment.create({
-        parcel: parcelId,
-        user: parcel.sender,
-        amount: parcel.amount,
-        method: parcel.paymentMethod,
-        status: "completed",
-        collectedBy: req.user._id,
-      });
+    // Add to status history
+    parcel.statusHistory.push({
+      status: parcel.status,
+      updatedBy: req.user._id,
+      notes: "Payment collected by driver",
+      timestamp: new Date(),
+    });
+
+    // Find and update the associated payment record
+    const payment = await Payment.findOne({ parcel: parcel._id });
+    if (payment) {
+      payment.status = "completed";
+      payment.collectedBy = req.user._id;
+      payment.collectionDate = new Date();
+      await payment.save();
     }
 
     await parcel.save();
-
-    // Create notifications
-    await Promise.all([
-      Notification.create({
-        user: parcel.sender,
-        title: "Payment Status Update",
-        message: `Payment for parcel (${parcel.trackingId}) has been marked as ${paymentStatus}`,
-        type: "payment_update",
-        parcel: parcelId,
-      }),
-    ]);
 
     res.status(200).json({
       status: "success",
       data: {
         parcel,
+        payment,
       },
     });
   } catch (error) {
+    console.error("Update parcel payment error:", error);
     res.status(500).json({
       status: "error",
-      message: error.message,
+      message: error.message || "Failed to update payment status",
     });
   }
 };

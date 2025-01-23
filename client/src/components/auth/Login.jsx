@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../assets/logoo.png";
 import back from "../../assets/back.png";
-import authService from "../../api/authService";
 import toast from "react-hot-toast";
+import { authAPI } from "../../api/apis";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await authService.login(formData);
+      const response = await authAPI.login(formData);
 
       if (response.status === "success") {
         toast.success("Login successful!");

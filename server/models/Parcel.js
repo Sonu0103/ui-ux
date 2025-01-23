@@ -1,5 +1,34 @@
 const mongoose = require("mongoose");
 
+// Define status constants
+const PARCEL_STATUSES = [
+  "pending",
+  "picked_up",
+  "in_transit",
+  "delivered",
+  "cancelled",
+];
+const PAYMENT_STATUSES = ["pending", "completed", "failed"];
+const PAYMENT_METHODS = ["cash_on_delivery", "online_payment"];
+
+const statusHistorySchema = new mongoose.Schema({
+  status: {
+    type: String,
+    enum: PARCEL_STATUSES,
+    required: true,
+  },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  notes: String,
+  timestamp: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const parcelSchema = new mongoose.Schema(
   {
     trackingId: {
@@ -89,50 +118,53 @@ const parcelSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "picked_up", "in_transit", "delivered", "cancelled"],
+      enum: PARCEL_STATUSES,
       default: "pending",
+      required: true,
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid"],
+      enum: PAYMENT_STATUSES,
       default: "pending",
     },
     paymentMethod: {
       type: String,
-      enum: ["cash_on_delivery", "online_payment"],
+      enum: PAYMENT_METHODS,
       required: true,
     },
     assignedDriver: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    statusHistory: [
-      {
-        status: {
-          type: String,
-          enum: ["pending", "in_transit", "delivered", "cancelled"],
-          required: true,
-        },
-        updatedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
-        notes: String,
-        timestamp: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
+    statusHistory: [statusHistorySchema],
   },
   {
     timestamps: true,
   }
 );
 
+// Initialize status history on parcel creation
+parcelSchema.pre("save", function (next) {
+  if (this.isNew) {
+    this.statusHistory = [
+      {
+        status: this.status,
+        updatedBy: this.sender,
+        notes: "Parcel created",
+        timestamp: new Date(),
+      },
+    ];
+  }
+  next();
+});
+
 // Add a compound index for better querying
 parcelSchema.index({ sender: 1, createdAt: -1 });
 
 const Parcel = mongoose.model("Parcel", parcelSchema);
+
+// Export the model and constants
 module.exports = Parcel;
+module.exports.PARCEL_STATUSES = PARCEL_STATUSES;
+module.exports.PAYMENT_STATUSES = PAYMENT_STATUSES;
+module.exports.PAYMENT_METHODS = PAYMENT_METHODS;

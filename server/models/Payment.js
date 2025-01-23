@@ -18,7 +18,8 @@ const paymentSchema = new mongoose.Schema(
     },
     method: {
       type: String,
-      enum: ["cash_on_delivery", "online_payment"],
+      enum: ["cash", "cash_on_delivery", "online_payment"],
+      default: "cash_on_delivery",
       required: true,
     },
     status: {
@@ -35,14 +36,12 @@ const paymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: function () {
-        return this.method === "cash_on_delivery";
+        return false; // Never required
       },
     },
     collectionDate: {
       type: Date,
-      default: function () {
-        return this.status === "completed" ? Date.now() : null;
-      },
+      default: null,
     },
   },
   {

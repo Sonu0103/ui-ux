@@ -1,79 +1,174 @@
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 const Hero = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const slides = [
+    {
+      image: "/images/delivery1.jpg",
+      title: "Fast & Reliable",
+      subtitle: "Courier Service",
+      description:
+        "Experience seamless delivery solutions with our nationwide network.",
+    },
+    {
+      image: "/images/delivery2.jpg",
+      title: "Track Your Parcels",
+      subtitle: "Real-Time Updates",
+      description:
+        "Stay informed with real-time tracking and instant notifications.",
+    },
+    {
+      image: "/images/delivery3.jpg",
+      title: "Nationwide Coverage",
+      subtitle: "Express Delivery",
+      description: "Reaching every corner of Nepal with speed and reliability.",
+    },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
+  };
+
   return (
-    <section className="bg-cyan-400 text-white min-h-screen flex items-center">
-      <div className="w-full px-8">
-        <div className="container mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="max-w-3xl"
+    <div
+      id="hero"
+      className="relative min-h-screen bg-gradient-to-r from-blue-600 to-green-500 overflow-hidden"
+    >
+      {/* Carousel */}
+      <div className="absolute inset-0 w-full h-full">
+        {slides.map((slide, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-opacity duration-1000 ${
+              currentSlide === index ? "opacity-100" : "opacity-0"
+            }`}
           >
-            <motion.h1
-              className="text-6xl font-bold leading-tight mb-6"
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              Fast, Reliable and
-              <br />
-              <span className="text-purple-200">Affordable Parcel</span>
-              <br />
-              Delivery Services
-            </motion.h1>
-            <motion.p
-              className="text-xl mb-12 text-gray-100"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-            >
-              We deliver your parcels Safely and on time
-            </motion.p>
-            <motion.div
-              className="flex gap-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.9 }}
-            >
-              <button className="bg-white text-black px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all shadow-lg">
-                Create Parcel
-              </button>
-              <button className="bg-purple-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-purple-600 transform hover:scale-105 transition-all shadow-lg">
-                Track your Parcel
-              </button>
-            </motion.div>
-          </motion.div>
+            <div className="absolute inset-0 bg-black/50 z-10" />
+            <img
+              src={slide.image}
+              alt={slide.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="relative z-20 flex items-center min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="text-center md:text-left">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
+                {slides[currentSlide].title}
+                <br />
+                <span className="text-yellow-300">
+                  {slides[currentSlide].subtitle}
+                </span>
+                <br />
+                in Nepal
+              </h1>
+              <p className="text-lg md:text-xl text-white/90 mb-8">
+                {slides[currentSlide].description}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                <Link
+                  to="/signup"
+                  className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold px-8 py-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1"
+                >
+                  Get Started
+                </Link>
+                <Link
+                  to="/pricing"
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-4 rounded-lg text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1"
+                >
+                  View Pricing
+                </Link>
+              </div>
+            </div>
+
+            {/* Stats Section */}
+            <div className="grid grid-cols-3 gap-8 mt-12 md:mt-0">
+              <div className="text-center">
+                <h3 className="text-3xl font-bold text-white mb-2">24/7</h3>
+                <p className="text-white/80">Support</p>
+              </div>
+              <div className="text-center">
+                <h3 className="text-3xl font-bold text-white mb-2">98%</h3>
+                <p className="text-white/80">On-time Delivery</p>
+              </div>
+              <div className="text-center">
+                <h3 className="text-3xl font-bold text-white mb-2">1000+</h3>
+                <p className="text-white/80">Happy Customers</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Animated background elements */}
-      <motion.div
-        className="absolute right-0 top-1/4 w-96 h-96 bg-cyan-300 rounded-full mix-blend-multiply filter blur-xl opacity-70"
-        animate={{
-          scale: [1, 1.2, 1],
-          rotate: [0, 90, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-      />
-      <motion.div
-        className="absolute right-1/4 bottom-1/4 w-64 h-64 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-60"
-        animate={{
-          scale: [1, 1.5, 1],
-          rotate: [0, -90, 0],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-      />
-    </section>
+      {/* Carousel Controls */}
+      <div className="absolute bottom-4 left-0 right-0 z-30 flex justify-center space-x-2">
+        {slides.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentSlide(index)}
+            className={`w-3 h-3 rounded-full transition-colors ${
+              currentSlide === index ? "bg-yellow-300" : "bg-white/50"
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Navigation Arrows */}
+      <button
+        onClick={prevSlide}
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-30 text-white hover:text-yellow-300 transition-colors"
+      >
+        <svg
+          className="w-8 h-8"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+      </button>
+      <button
+        onClick={nextSlide}
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-30 text-white hover:text-yellow-300 transition-colors"
+      >
+        <svg
+          className="w-8 h-8"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
+      </button>
+    </div>
   );
 };
 

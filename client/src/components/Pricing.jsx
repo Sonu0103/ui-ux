@@ -9,25 +9,55 @@ const Pricing = () => {
 
   const plans = [
     {
-      name: "Standard Delivery",
-      price: "NPR.100",
+      name: "Standard",
+      tagline: "For small packages",
+      price: "150",
       duration: "3-5 business days",
-      features: ["Up to 5kg", "Track & Trace"],
-      color: "from-blue-500 to-blue-400",
+      color: "bg-blue-800",
+      buttonColor: "bg-yellow-500 hover:bg-yellow-600",
+      popular: false,
+      features: [
+        { text: "Up to 5kg weight", included: true },
+        { text: "Real-time tracking", included: true },
+        { text: "Basic insurance coverage", included: true },
+        { text: "Door-to-door delivery", included: true },
+        { text: "SMS notifications", included: true },
+        { text: "Priority support", included: false },
+      ],
     },
     {
-      name: "Express Delivery",
-      price: "NPR.200",
+      name: "Express",
+      tagline: "Most Popular",
+      price: "300",
       duration: "1-2 business days",
-      features: ["Up to 10kg", "Priority handling"],
-      color: "from-blue-500 to-blue-400",
+      color: "bg-green-800",
+      buttonColor: "bg-orange-500 hover:bg-orange-600",
+      popular: true,
+      features: [
+        { text: "Up to 10kg weight", included: true },
+        { text: "Real-time tracking", included: true },
+        { text: "Enhanced insurance coverage", included: true },
+        { text: "Door-to-door delivery", included: true },
+        { text: "SMS & Email notifications", included: true },
+        { text: "Priority support", included: true },
+      ],
     },
     {
-      name: "Same Day Delivery",
-      price: "NPR.300",
-      duration: "Today",
-      features: ["Up to 15kg", "Express handling"],
-      color: "from-blue-500 to-blue-400",
+      name: "Premium",
+      tagline: "Same day delivery",
+      price: "500",
+      duration: "Within 12 hours",
+      color: "bg-blue-800",
+      buttonColor: "bg-yellow-500 hover:bg-yellow-600",
+      popular: false,
+      features: [
+        { text: "Up to 20kg weight", included: true },
+        { text: "Real-time tracking", included: true },
+        { text: "Premium insurance coverage", included: true },
+        { text: "Door-to-door delivery", included: true },
+        { text: "Priority notifications", included: true },
+        { text: "24/7 VIP support", included: true },
+      ],
     },
   ];
 
@@ -56,68 +86,120 @@ const Pricing = () => {
   };
 
   return (
-    <section
-      className="min-h-screen flex items-center py-20 bg-white"
-      id="pricing"
-    >
-      <div className="w-full px-8">
-        <div className="container mx-auto">
-          <motion.div
-            ref={ref}
-            initial={{ opacity: 0, y: 20 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-20"
-          >
-            <h2 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
-              Simple and Transparent Pricing
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Choose the perfect plan for your delivery needs
-            </p>
-          </motion.div>
+    <section className="py-20 bg-gray-50" id="pricing">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
+            Simple & Transparent <span className="text-blue-800">Pricing</span>
+          </h2>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Choose the perfect delivery plan that suits your needs
+          </p>
+        </motion.div>
 
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate={inView ? "visible" : "hidden"}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
-          >
-            {plans.map((plan, index) => (
-              <motion.div
-                key={index}
-                variants={itemVariants}
-                className="relative group"
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate={inView ? "visible" : "hidden"}
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto"
+        >
+          {plans.map((plan, index) => (
+            <motion.div
+              key={index}
+              variants={itemVariants}
+              className={`relative group ${
+                plan.popular ? "md:-mt-4 md:mb-4" : ""
+              }`}
+            >
+              {plan.popular && (
+                <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                  <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                    Most Popular
+                  </span>
+                </div>
+              )}
+
+              <div
+                className={`relative rounded-2xl overflow-hidden ${plan.color} transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl`}
               >
-                <div className="relative p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                  <div
-                    className={`bg-gradient-to-r ${plan.color} w-16 h-16 rounded-xl mb-6 flex items-center justify-center text-white font-bold text-xl`}
-                  >
-                    {index + 1}
+                {/* Header */}
+                <div className="p-8 text-center text-white">
+                  <h3 className="text-2xl font-bold mb-1">{plan.name}</h3>
+                  <p className="text-white/80 mb-6">{plan.tagline}</p>
+                  <div className="flex items-baseline justify-center mb-2">
+                    <span className="text-lg">NPR</span>
+                    <span className="text-5xl font-bold mx-2">
+                      {plan.price}
+                    </span>
                   </div>
-                  <h3 className="text-2xl font-bold mb-4">{plan.name}</h3>
-                  <div className="text-4xl font-bold mb-2 text-blue-600">
-                    {plan.price}
-                  </div>
-                  <p className="text-gray-500 mb-8">{plan.duration}</p>
+                  <p className="text-white/80 text-sm">{plan.duration}</p>
+                </div>
+
+                {/* Features */}
+                <div className="bg-white p-8 rounded-t-3xl">
                   <ul className="space-y-4 mb-8">
                     {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center text-gray-600">
-                        <span className="mr-2 text-green-500">✓</span>
-                        {feature}
+                      <li key={idx} className="flex items-center text-gray-700">
+                        <span
+                          className={`mr-2 ${
+                            feature.included ? "text-green-500" : "text-red-500"
+                          }`}
+                        >
+                          {feature.included ? "✓" : "×"}
+                        </span>
+                        {feature.text}
                       </li>
                     ))}
                   </ul>
                   <button
-                    className={`w-full py-3 px-6 rounded-xl text-white font-semibold bg-gradient-to-r from-blue-500 to-blue-400 transform transition-transform hover:scale-105 hover:shadow-lg`}
+                    className={`w-full py-4 px-6 rounded-xl text-center font-semibold transition-colors ${
+                      plan.buttonColor
+                    } ${plan.popular ? "text-white" : "text-gray-900"}`}
                   >
-                    Choose Plan
+                    Choose {plan.name}
                   </button>
                 </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
+
+                {/* Decorative Elements */}
+                <div className="absolute top-0 right-0 -mt-2 -mr-2 w-24 h-24 bg-white/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute bottom-0 left-0 -mb-2 -ml-2 w-20 h-20 bg-white/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Additional Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="mt-16 text-center"
+        >
+          <p className="text-gray-600 mb-4">
+            All plans include basic features like real-time tracking and
+            door-to-door delivery
+          </p>
+          <div className="flex justify-center space-x-4">
+            <span className="inline-flex items-center text-sm text-gray-600">
+              <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+              Secure Payments
+            </span>
+            <span className="inline-flex items-center text-sm text-gray-600">
+              <span className="w-3 h-3 bg-orange-500 rounded-full mr-2"></span>
+              24/7 Support
+            </span>
+            <span className="inline-flex items-center text-sm text-gray-600">
+              <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+              Money Back Guarantee
+            </span>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

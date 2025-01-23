@@ -2,6 +2,7 @@ const User = require("../models/User");
 const Parcel = require("../models/Parcel");
 const PricingPlan = require("../models/PricingPlan");
 const Notification = require("../models/Notification");
+const Payment = require("../models/Payment");
 const mongoose = require("mongoose");
 
 exports.getDashboardStats = async (req, res) => {
@@ -147,6 +148,10 @@ exports.deleteParcel = async (req, res) => {
         message: "Parcel not found",
       });
     }
+
+    // Optionally, delete related records (like payments, notifications, etc.)
+    await Payment.deleteMany({ parcel: req.params.id });
+    await Notification.deleteMany({ parcel: req.params.id });
 
     res.status(200).json({
       status: "success",
@@ -432,6 +437,227 @@ exports.getDrivers = async (req, res) => {
       },
     });
   } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
+exports.getReports = async (req, res) => {
+  try {
+    const { startDate, endDate, type } = req.query;
+    const query = {};
+
+    // Add date range filter if provided
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+
+    // Get revenue data
+    const revenue = await Payment.aggregate([
+      { $match: { status: "completed", ...query } },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          total: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: -1 } },
+    ]);
+
+    // Get delivery statistics with time analysis
+    const deliveryStats = await Parcel.aggregate([
+      { $match: query },
+      {
+        $facet: {
+          statusCounts: [
+            {
+              $group: {
+                _id: "$status",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+          deliveryTimes: [
+            {
+              $match: {
+                status: "delivered",
+                statusHistory: { $exists: true, $ne: [] },
+              },
+            },
+            {
+              $project: {
+                deliveryTime: {
+                  $divide: [
+                    {
+                      $subtract: [
+                        { $arrayElemAt: ["$statusHistory.timestamp", -1] },
+                        "$createdAt",
+                      ],
+                    },
+                    3600000, // Convert to hours
+                  ],
+                },
+                date: {
+                  $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+                },
+              },
+            },
+            {
+              $group: {
+                _id: "$date",
+                avgDeliveryTime: { $avg: "$deliveryTime" },
+                minDeliveryTime: { $min: "$deliveryTime" },
+                maxDeliveryTime: { $max: "$deliveryTime" },
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+          successRate: [
+            {
+              $group: {
+                _id: {
+                  date: {
+                    $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+                  },
+                },
+                total: { $sum: 1 },
+                delivered: {
+                  $sum: { $cond: [{ $eq: ["$status", "delivered"] }, 1, 0] },
+                },
+              },
+            },
+            {
+              $project: {
+                _id: "$_id.date",
+                rate: {
+                  $multiply: [{ $divide: ["$delivered", "$total"] }, 100],
+                },
+                total: 1,
+                delivered: 1,
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+        },
+      },
+    ]);
+
+    // Get top performing drivers with delivery time metrics
+    const topDrivers = await Parcel.aggregate([
+      {
+        $match: {
+          status: "delivered",
+          assignedDriver: { $exists: true },
+          ...query,
+        },
+      },
+      {
+        $group: {
+          _id: "$assignedDriver",
+          deliveries: { $sum: 1 },
+          totalAmount: { $sum: "$amount" },
+          avgDeliveryTime: {
+            $avg: {
+              $divide: [
+                {
+                  $subtract: [
+                    { $arrayElemAt: ["$statusHistory.timestamp", -1] },
+                    "$createdAt",
+                  ],
+                },
+                3600000, // Convert to hours
+              ],
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "driverInfo",
+        },
+      },
+      { $unwind: "$driverInfo" },
+      {
+        $project: {
+          name: "$driverInfo.name",
+          deliveries: 1,
+          totalAmount: 1,
+          avgDeliveryTime: 1,
+          efficiency: {
+            $multiply: [
+              { $divide: ["$deliveries", { $add: ["$avgDeliveryTime", 1] }] },
+              100,
+            ],
+          },
+        },
+      },
+      { $sort: { efficiency: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // Get popular delivery areas with average delivery times
+    const popularAreas = await Parcel.aggregate([
+      { $match: { ...query, status: "delivered" } },
+      {
+        $group: {
+          _id: "$deliveryAddress",
+          count: { $sum: 1 },
+          avgDeliveryTime: {
+            $avg: {
+              $divide: [
+                {
+                  $subtract: [
+                    { $arrayElemAt: ["$statusHistory.timestamp", -1] },
+                    "$createdAt",
+                  ],
+                },
+                3600000, // Convert to hours
+              ],
+            },
+          },
+          totalAmount: { $sum: "$amount" },
+        },
+      },
+      {
+        $project: {
+          count: 1,
+          avgDeliveryTime: 1,
+          totalAmount: 1,
+          areaEfficiency: {
+            $multiply: [
+              { $divide: ["$count", { $add: ["$avgDeliveryTime", 1] }] },
+              100,
+            ],
+          },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+    ]);
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        revenue,
+        deliveryStats: deliveryStats[0],
+        topDrivers,
+        popularAreas,
+      },
+    });
+  } catch (error) {
+    console.error("Reports error:", error);
     res.status(500).json({
       status: "error",
       message: error.message,
