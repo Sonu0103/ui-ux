@@ -13,6 +13,7 @@ import {
   FiChevronDown,
   FiMenu,
 } from "react-icons/fi";
+import { toast } from "react-hot-toast";
 
 const DriverDashboardLayout = ({ children }) => {
   const navigate = useNavigate();
@@ -45,6 +46,8 @@ const DriverDashboardLayout = ({ children }) => {
 
   const handleLogout = () => {
     authAPI.logout();
+    setUserData(null);
+    toast.success("Logged out successfully");
     navigate("/");
   };
 

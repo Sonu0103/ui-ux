@@ -30,7 +30,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error("API Error:", error.response?.data || error.message);
-    if (error.response?.status === 401) {
+    // Only redirect to login for protected routes that return 401
+    if (
+      error.response?.status === 401 &&
+      !error.config.url.includes("/auth/")
+    ) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";

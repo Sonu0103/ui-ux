@@ -346,8 +346,8 @@ exports.deleteUser = async (req, res) => {
 
 exports.assignParcelToDriver = async (req, res) => {
   try {
-    const { parcelId } = req.body;
-    console.log("Assigning parcel:", parcelId);
+    const { parcelId, driverId } = req.body;
+    console.log("Assigning parcel:", parcelId, "to driver:", driverId);
 
     // First find the parcel
     const parcel = await Parcel.findById(parcelId);
@@ -360,24 +360,20 @@ exports.assignParcelToDriver = async (req, res) => {
       });
     }
 
-    // Find an available driver with debug logs
-    console.log("Searching for available drivers...");
-    const drivers = await User.find({
+    // Find the specified driver
+    const driver = await User.findOne({
+      _id: driverId,
       role: "driver",
       status: "active",
     });
-    console.log("Found drivers:", drivers);
+    console.log("Found driver:", driver);
 
-    if (!drivers || drivers.length === 0) {
+    if (!driver) {
       return res.status(400).json({
         status: "error",
-        message: "No available drivers found",
+        message: "Driver not found or not active",
       });
     }
-
-    // Select the first available driver
-    const driver = drivers[0];
-    console.log("Selected driver:", driver);
 
     // Update the parcel with assigned driver
     parcel.assignedDriver = driver._id;

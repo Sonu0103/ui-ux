@@ -42,6 +42,7 @@ const DashboardLayout = ({ children }) => {
 
   const handleLogout = () => {
     authAPI.logout();
+    setUserData(null);
     toast.success("Logged out successfully");
     navigate("/");
   };

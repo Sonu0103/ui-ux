@@ -1,11 +1,16 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import Hero from "./components/Hero";
-import Features from "./components/Features";
-import HowItWorks from "./components/HowItWorks";
-import Pricing from "./components/Pricing";
-import Contact from "./components/Contact";
-import Footer from "./components/Footer";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import Navbar from "./components/landingpage/Navbar";
+import Hero from "./components/landingpage/Hero";
+import Features from "./components/landingpage/Features";
+import HowItWorks from "./components/landingpage/HowItWorks";
+import Pricing from "./components/landingpage/Pricing";
+import Contact from "./components/landingpage/Contact";
+import Footer from "./components/landingpage/Footer";
 import Login from "./components/auth/Login";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import DashboardHome from "./components/dashboard/DashboardHome";
@@ -31,27 +36,29 @@ import ForgotPassword from "./components/auth/ForgotPassword";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MyOrders from "./components/dashboard/MyOrders";
 
+// Landing Page Component
+const LandingPage = () => (
+  <div className="min-h-screen bg-gray-50">
+    <Navbar />
+    <main>
+      <Hero />
+      <Features />
+      <HowItWorks />
+      <Pricing />
+      <Contact />
+    </main>
+    <Footer />
+  </div>
+);
+
 const App = () => (
   <Router>
     <Toaster position="top-right" />
     <Routes>
-      {/* Public Routes */}
-      <Route
-        path="/"
-        element={
-          <div className="min-h-screen bg-gray-50">
-            <Navbar />
-            <main>
-              <Hero />
-              <Features />
-              <HowItWorks />
-              <Pricing />
-              <Contact />
-            </main>
-            <Footer />
-          </div>
-        }
-      />
+      {/* Landing Page - Default Route */}
+      <Route path="/" element={<LandingPage />} />
+
+      {/* Auth Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -231,6 +238,9 @@ const App = () => (
           </ProtectedRoute>
         }
       />
+
+      {/* Catch-all route - Redirect to landing page */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   </Router>
 );

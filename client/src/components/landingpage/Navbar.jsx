@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import logo from "../assets/logoo.png";
-import { authAPI } from "../api/apis";
+import logo from "../../assets/logoo.png";
+import { authAPI } from "../../api/apis";
 import { FiUser, FiChevronDown } from "react-icons/fi";
 
 const Navbar = () => {
@@ -33,7 +33,7 @@ const Navbar = () => {
   const handleLogout = () => {
     authAPI.logout();
     setUserData(null);
-    window.location.reload();
+    window.location.href = "/";
   };
 
   const scrollToSection = (sectionId) => {
